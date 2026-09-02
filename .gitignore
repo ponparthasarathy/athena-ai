@@ -1,0 +1,25 @@
+# ==============================================
+# Athena IoT Health -- .gitignore
+# ==============================================
+
+# Environment variables (contains API keys -- NEVER commit this)
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Arduino build artifacts
+firmware/**/*.bin
+firmware/**/*.elf
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

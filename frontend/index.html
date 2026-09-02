@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Athena - Health Companion Dashboard</title>
+<meta name="description" content="Athena intelligent IoT health monitoring dashboard - real-time vitals, fall detection and environmental risk.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg: #EEF2EF; --panel: #F7F9F7; --ink: #17322B; --ink-soft: #4C635B; --line: #CBD6CE; --teal: #1F6F63; --teal-soft: #DCEAE5; --amber: #C0791F; --amber-soft: #F3E3C7; --red: #AE3B2E; --red-soft: #F3DAD5; }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ background: var(--bg); color: var(--ink); font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; padding: 28px; }
+  .display{ font-family: 'Fraunces', serif; }
+  .frame{ max-width: 1180px; margin: 0 auto; }
+  header{ display:flex; justify-content:space-between; align-items:flex-end; padding-bottom: 18px; border-bottom: 1px solid var(--line); margin-bottom: 22px; flex-wrap: wrap; gap: 14px; }
+  header h1{ font-size: 27px; font-weight: 500; margin:0; letter-spacing: -0.01em; }
+  header p{ margin: 4px 0 0; color: var(--ink-soft); font-size: 13.5px; }
+  .device-tag{ text-align:right; font-size: 12.5px; color: var(--ink-soft); line-height:1.5; }
+  .device-tag b{ color: var(--ink); font-weight: 600; }
+  .dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--teal); margin-right:6px; }
+  .grid{ display:grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 18px; }
+  @media (max-width: 880px){ .grid{ grid-template-columns: 1fr; } }
+  .panel{ background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 20px; }
+  .panel h2{ font-size: 12px; font-weight: 600; color: var(--ink-soft); letter-spacing: 0.05em; margin: 0 0 14px; text-transform: uppercase; }
+  .status-panel{ grid-column: 1 / 2; grid-row: 1 / 3; display:flex; flex-direction:column; }
+  .status-word{ font-size: 44px; margin: 4px 0 6px; }
+  .status-word.normal{ color: var(--teal); }
+  .status-word.watch{ color: var(--amber); }
+  .status-word.alert, .status-word.emergency{ color: var(--red); }
+  .status-sub{ color: var(--ink-soft); font-size: 13.5px; margin-bottom: 20px; }
+  .vital-row{ display:flex; justify-content:space-between; padding: 11px 0; border-top: 1px solid var(--line); }
+  .vital-label{ color: var(--ink-soft); font-size: 13px; }
+  .vital-value{ font-size: 15px; font-weight: 600; }
+  .chart-panel canvas{ width: 100%; height: 90px; display:block; }
+  .chart-panel .reading{ font-family:'Fraunces', serif; font-size: 30px; margin: 2px 0 8px; }
+  .chart-panel .unit{ font-size: 13px; color: var(--ink-soft); font-weight: 400; }
+  .chart-panel .range{ font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+  .env-panel{ grid-column: 2 / 4; }
+  .env-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 600px){ .env-grid{ grid-template-columns: repeat(2, 1fr); } }
+  .env-cell{ border: 1px solid var(--line); border-radius: 4px; padding: 14px; }
+  .env-cell .k{ font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; }
+  .env-cell .v{ font-family: 'Fraunces', serif; font-size: 22px; }
+  .env-cell .tag{ display:inline-block; margin-top: 8px; font-size: 11.5px; padding: 3px 8px; border-radius: 2px; }
+  .tag.ok{ background: var(--teal-soft); color: var(--teal); }
+  .tag.watch{ background: var(--amber-soft); color: var(--amber); }
+  .tag.bad{ background: var(--red-soft); color: var(--red); }
+  .timeline-panel{ grid-column: 2 / 4; }
+  .tl-item{ display:flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .tl-item:first-child{ border-top: none; }
+  .tl-time{ color: var(--ink-soft); min-width: 58px; }
+  .tl-dot{ width:7px; height:7px; border-radius:50%; margin-top: 5px; flex-shrink:0; }
+  .tl-dot.ok{ background: var(--teal); }
+  .tl-dot.watch{ background: var(--amber); }
+  .tl-dot.bad{ background: var(--red); }
+  .tl-text b{ font-weight: 600; }
+  .tl-text span{ color: var(--ink-soft); }
+  footer{ margin-top: 22px; font-size: 12px; color: var(--ink-soft); text-align:center; }
+  .demo-banner{ max-width:1180px; margin: 0 auto 16px; padding: 10px 16px; background: var(--amber-soft); color: var(--amber); border-radius: 4px; font-size: 12.5px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .demo-banner button{ font-size: 11.5px; padding: 4px 10px; border: 1px solid var(--amber); background: transparent; color: var(--amber); border-radius: 2px; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .demo-banner button:hover{ background: var(--amber); color: #fff; }
+  .ai-panel{ grid-column: 1 / 4; border-left: 3px solid var(--teal); }
+  .ai-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; }
+  .ai-body{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 880px){ .ai-body{ grid-template-columns: 1fr; } }
+  .ai-section-label{ font-size: 11px; font-weight: 600; color: var(--ink-soft); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-section p{ font-size: 13.5px; line-height: 1.6; margin: 0; color: var(--ink); }
+  .ai-flags{ display:flex; flex-wrap:wrap; gap: 6px; margin-top: 12px; }
+  .ai-flag{ font-size: 11px; padding: 3px 8px; border-radius: 2px; background: var(--red-soft); color: var(--red); font-weight: 600; }
+  .ai-flag.normal{ background: var(--teal-soft); color: var(--teal); }
+  .ai-loading{ color: var(--ink-soft); font-size: 13px; font-style: italic; }
+  .ai-trigger-btn{ font-size: 11.5px; padding: 4px 10px; border: 1px solid var(--teal); background: transparent; color: var(--teal); border-radius: 2px; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .ai-trigger-btn:hover{ background: var(--teal); color: #fff; }
+</style>
+</head>
+<body>
+<div class="demo-banner" id="demo-banner">
+  <span>Showing simulated sensor data - no ESP32 detected. Trigger a sample event to see how alerts render.</span>
+  <span style="display:flex; gap:8px;">
+    <button onclick="triggerEvent('fall')">Simulate fall</button>
+    <button onclick="triggerEvent('heat')">Simulate heat spike</button>
+  </span>
+</div>
+<div class="frame">
+  <header>
+    <div>
+      <h1 class="display">Athena <span style="color:var(--ink-soft); font-weight:400;">- Health Companion</span></h1>
+      <p>On-device early warning &middot; environment, motion &amp; vitals processed locally</p>
+    </div>
+    <div class="device-tag">
+      <div><span class="dot" id="conn-dot"></span><b id="device-label">PHC-0001</b></div>
+      <div id="last-sync">connecting...</div>
+      <div style="margin-top:6px;">
+        <input id="ws-url-input" type="text" placeholder="ws://192.168.4.1/ws" style="font-size:11.5px; padding:3px 6px; border:1px solid var(--line); border-radius:2px; width:150px; font-family:'Inter',sans-serif;">
+        <button onclick="setDeviceUrl()" style="font-size:11.5px; padding:3px 8px; border:1px solid var(--line); border-radius:2px; background:var(--panel); cursor:pointer; font-family:'Inter',sans-serif;">Connect</button>
+      </div>
+    </div>
+  </header>
+  <div class="grid">
+    <div class="panel status-panel">
+      <h2>Current Risk</h2>
+      <div class="status-word display normal" id="risk-word">Normal</div>
+      <div class="status-sub" id="risk-sub">All readings within expected range</div>
+      <div class="vital-row"><span class="vital-label">Heart Rate</span><span class="vital-value" id="v-bpm">- bpm</span></div>
+      <div class="vital-row"><span class="vital-label">Blood Oxygen (SpO2)</span><span class="vital-value" id="v-spo2">- %</span></div>
+      <div class="vital-row"><span class="vital-label">Ambient Temperature</span><span class="vital-value" id="v-temp">- C</span></div>
+      <div class="vital-row"><span class="vital-label">Humidity</span><span class="vital-value" id="v-hum">- %</span></div>
+      <div class="vital-row"><span class="vital-label">Barometric Pressure</span><span class="vital-value" id="v-pres">- hPa</span></div>
+      <div class="vital-row"><span class="vital-label">Movement State</span><span class="vital-value" id="v-move">-</span></div>
+      <div class="vital-row"><span class="vital-label">Last Movement</span><span class="vital-value" id="v-lastmove">-</span></div>
+    </div>
+    <div class="panel chart-panel">
+      <h2>Heat Index</h2>
+      <div class="reading display" id="heat-big">- <span class="unit">C</span></div>
+      <canvas id="temp-chart"></canvas>
+      <div class="range">Computed from ambient temp + humidity</div>
+    </div>
+    <div class="panel chart-panel">
+      <h2>Barometric Pressure</h2>
+      <div class="reading display" id="pres-big">- <span class="unit">hPa</span></div>
+      <canvas id="pres-chart"></canvas>
+      <div class="range" id="pres-trend-note">A sustained drop can signal an incoming storm</div>
+    </div>
+    <div class="panel env-panel">
+      <h2>Vitals &amp; Environmental Risk</h2>
+      <div class="env-grid">
+        <div class="env-cell"><div class="k">Heart Rate</div><div class="v" id="env-bpm">-</div><span class="tag ok" id="env-bpm-tag">Normal</span></div>
+        <div class="env-cell"><div class="k">Oxygen (SpO2)</div><div class="v" id="env-spo2">-</div><span class="tag ok" id="env-spo2-tag">Normal</span></div>
+        <div class="env-cell"><div class="k">Heat Stress</div><div class="v" id="env-heat">-</div><span class="tag ok" id="env-heat-tag">Normal</span></div>
+        <div class="env-cell"><div class="k">Fall / Motion</div><div class="v" id="env-fall">-</div><span class="tag ok" id="env-fall-tag">Normal</span></div>
+      </div>
+    </div>
+    <div class="panel timeline-panel">
+      <h2>Alert Log</h2>
+      <div id="timeline"><div style="font-size:13px; color:var(--ink-soft); font-style:italic;">No alerts yet - system nominal.</div></div>
+    </div>
+    <div class="panel ai-panel">
+      <div class="ai-header">
+        <h2 style="margin:0;">Dr. Athena - AI Advisory</h2>
+        <button class="ai-trigger-btn" id="ai-trigger-btn" onclick="requestAIEvaluation()">Request Evaluation</button>
+      </div>
+      <div id="ai-content">
+        <p class="ai-loading">Waiting for first AI evaluation. Gemini analyses vitals every 5 minutes, or immediately on anomaly detection.</p>
+      </div>
+    </div>
+  </div>
+  <footer>Live telemetry over WebSocket &middot; AI advisory by Google Gemini 2.5 &middot; Athena 2026</footer>
+</div>
+<script>
+let DEVICE_WS_URL="",socket=null,usingLiveData=false,lastRiskLevel=0,simTimer=null,simConnectTimeout=null;
+const state={temp:[],pressure:[]};
+const sim={temp:29.5,hum:55,pres:1011,hr:74,spo2:97,finger:true,moving:false,lastMoveMin:2,fall:false,fallUntil:0};
+function computeHI(tC,rh){const tF=tC*9/5+32;const hiF=-42.379+2.04901523*tF+10.14333127*rh-0.22475541*tF*rh-0.00683783*tF*tF-0.05481717*rh*rh+0.00122874*tF*tF*rh+0.00085282*tF*rh*rh-0.00000199*tF*tF*rh*rh;return(hiF-32)*5/9;}
+function jitter(v,a){return v+(Math.random()-0.5)*a;}
+function triggerEvent(type){if(type==='fall'){sim.fall=true;sim.fallUntil=Date.now()+15000;sim.moving=false;sim.lastMoveMin=0;}if(type==='heat'){sim.temp=40;sim.hum=78;}}
+function nextSimReading(){
+  sim.temp=jitter(sim.temp>35?sim.temp*0.94+29*0.06:sim.temp,0.3);
+  sim.hum=Math.min(95,Math.max(30,jitter(sim.hum,1.2)));
+  sim.pres=jitter(sim.pres,0.15);
+  sim.moving=Math.random()<0.25;
+  sim.lastMoveMin=sim.moving?0:sim.lastMoveMin+(1/60);
+  if(sim.fall&&Date.now()>sim.fallUntil)sim.fall=false;
+  sim.finger=Math.random()>0.08;
+  if(sim.finger){sim.hr=Math.max(48,Math.min(140,jitter(sim.hr,3)));sim.spo2=Math.max(88,Math.min(99,Math.round(jitter(sim.spo2,0.6))));}
+  const heat=computeHI(sim.temp,sim.hum);
+  let risk=0;
+  if(sim.fall||heat>41)risk=3;else if(heat>37||sim.hr>125||(sim.hr>0&&sim.hr<45))risk=2;
+  return{ambient_temp_c:sim.temp,ambient_humidity:sim.hum,pressure_hpa:sim.pres,heat_index_c:heat,heart_rate:Math.round(sim.hr),spo2:sim.spo2,finger_detected:sim.finger,is_moving:sim.moving,last_movement_min:sim.lastMoveMin,fall_detected:sim.fall,risk_level:risk};
+}
+function startSimulation(){stopSimulation();document.getElementById('demo-banner').style.display='flex';setConnBadge(false,true);simTimer=setInterval(()=>renderLiveReading(nextSimReading()),1000);renderLiveReading(nextSimReading());}
+function stopSimulation(){if(simTimer)clearInterval(simTimer);simTimer=null;}
+function connectWebSocket(){
+  const url=DEVICE_WS_URL||`ws://${location.host}/ws`;
+  try{socket=new WebSocket(url);}catch(e){scheduleReconnect();return;}
+  clearTimeout(simConnectTimeout);
+  simConnectTimeout=setTimeout(()=>{if(!usingLiveData)startSimulation();},2500);
+  socket.onopen=()=>{usingLiveData=true;stopSimulation();document.getElementById('demo-banner').style.display='none';setConnBadge(true);};
+  socket.onclose=()=>{usingLiveData=false;setConnBadge(false);scheduleReconnect();};
+  socket.onerror=()=>{socket.close();};
+  socket.onmessage=(evt)=>{
+    try{
+      const msg=JSON.parse(evt.data);
+      if(msg.type==='TELEMETRY_UPDATE'&&msg.telemetry)renderLiveReading(msg.telemetry);
+      else if(msg.type==='AI_ADVISORY'&&msg.advisory)renderAIAdvisory(msg.advisory);
+      else if(msg.type==='INITIAL_STATE'&&msg.devices&&msg.devices.length>0){const dev=msg.devices[0];if(dev.telemetry)renderLiveReading(dev.telemetry);if(dev.advisory)renderAIAdvisory(dev.advisory);document.getElementById('device-label').textContent=dev.device_id||'PHC-0001';}
+      else if(msg.ambient_temp_c!==undefined)renderLiveReading(msg);
+    }catch(e){console.error('Bad payload',e);}
+  };
+}
+function scheduleReconnect(){setTimeout(()=>{if(!usingLiveData)connectWebSocket();},3000);}
+function setDeviceUrl(){const val=document.getElementById('ws-url-input').value.trim();if(!val)return;DEVICE_WS_URL=val;if(socket)socket.close();stopSimulation();connectWebSocket();}
+function setConnBadge(connected,demo){const dot=document.getElementById('conn-dot');const tag=document.getElementById('last-sync');if(connected){dot.style.background='var(--teal)';tag.textContent='live - connected to device';}else if(demo){dot.style.background='var(--amber)';tag.textContent='demo mode - simulated data';}else{dot.style.background='var(--amber)';tag.textContent='device offline - connecting...';}}
+function requestAIEvaluation(){
+  const btn=document.getElementById('ai-trigger-btn');btn.textContent='Requesting...';btn.disabled=true;
+  if(socket&&socket.readyState===WebSocket.OPEN){socket.send(JSON.stringify({action:'TRIGGER_EVALUATION',device_id:'PHC-0001'}));setTimeout(()=>{btn.textContent='Request Evaluation';btn.disabled=false;},5000);}
+  else{renderAIAdvisory({risk_level:'NORMAL',summary:'Demo mode: All vitals are within acceptable ranges. Patient appears at rest with stable cardiovascular and respiratory function.',actionable_advice:'Continue routine monitoring. Ensure patient stays hydrated, especially in warmer ambient conditions.',clinical_assessment:'Heart rate and SpO2 within normal limits. No indicators of acute distress or environmental overexposure detected.',vital_flags:[],generated_at:new Date().toISOString(),trigger_reason:'WEB_CLIENT_DEMAND',is_ai_generated:false});setTimeout(()=>{btn.textContent='Request Evaluation';btn.disabled=false;},1000);}
+}
+function pushCapped(arr,val,cap=40){arr.push(val);if(arr.length>cap)arr.shift();}
+function drawSpark(canvas,data,color){
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width=canvas.clientWidth*devicePixelRatio;
+  const h=canvas.height=canvas.clientHeight*devicePixelRatio;
+  ctx.clearRect(0,0,w,h);if(data.length<2)return;
+  const min=Math.min(...data),max=Math.max(...data);const pad=6*devicePixelRatio;
+  ctx.beginPath();
+  data.forEach((v,i)=>{const x=pad+(i/(data.length-1))*(w-2*pad);const y=h-pad-((v-min)/((max-min)||1))*(h-2*pad);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.strokeStyle=color;ctx.lineWidth=2*devicePixelRatio;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+}
+function tagEl(el,level,text){el.className='tag '+level;el.textContent=text;}
+function addTimeline(level,title,detail){
+  const wrap=document.getElementById('timeline');
+  if(wrap.querySelector('div[style]'))wrap.innerHTML='';
+  const item=document.createElement('div');item.className='tl-item';
+  const time=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  item.innerHTML=`<div class="tl-time">${time}</div><div class="tl-dot ${level}"></div><div class="tl-text"><b>${title}</b><br><span>${detail}</span></div>`;
+  wrap.prepend(item);while(wrap.children.length>6)wrap.removeChild(wrap.lastChild);
+}
+function renderAIAdvisory(advisory){
+  const riskColors={NORMAL:'ok',WATCH:'watch',ALERT:'bad',EMERGENCY:'bad'};
+  const level=riskColors[advisory.risk_level]||'ok';
+  const flags=(advisory.vital_flags||[]).map(f=>`<span class="ai-flag">${f}</span>`).join('')||'<span class="ai-flag normal">No active flags</span>';
+  const genTime=advisory.generated_at?new Date(advisory.generated_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'--';
+  const source=advisory.is_ai_generated?'Google Gemini 2.5':'Clinical Rule Engine';
+  document.getElementById('ai-content').innerHTML=`
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span class="tag ${level}" style="font-weight:600;">${advisory.risk_level}</span>
+      <span style="font-size:12px;color:var(--ink-soft);">Generated ${genTime} &middot; ${source} &middot; Trigger: ${(advisory.trigger_reason||'').replace(/_/g,' ')}</span>
+    </div>
+    <div class="ai-body">
+      <div class="ai-section"><div class="ai-section-label">Summary</div><p>${advisory.summary||'--'}</p></div>
+      <div class="ai-section"><div class="ai-section-label">Actionable Advice</div><p>${advisory.actionable_advice||'--'}</p></div>
+      <div class="ai-section"><div class="ai-section-label">Clinical Assessment</div><p>${advisory.clinical_assessment||'--'}</p></div>
+    </div>
+    <div class="ai-flags">${flags}</div>`;
+  if(advisory.risk_level==='EMERGENCY'||advisory.risk_level==='ALERT')addTimeline('bad','AI: '+advisory.risk_level,(advisory.summary||'').substring(0,80)+'...');
+}
+function renderLiveReading(d){
+  pushCapped(state.temp,d.heat_index_c);pushCapped(state.pressure,d.pressure_hpa);
+  const hf=d.finger_detected;
+  document.getElementById('v-bpm').textContent=(hf&&d.heart_rate>0)?(d.heart_rate+' bpm'):'--';
+  document.getElementById('v-spo2').textContent=(hf&&d.spo2>0)?(d.spo2+' %'):'--';
+  document.getElementById('env-bpm').textContent=(hf&&d.heart_rate>0)?(d.heart_rate+' bpm'):'No finger';
+  document.getElementById('env-spo2').textContent=(hf&&d.spo2>0)?(d.spo2+' %'):'No finger';
+  if(!hf){tagEl(document.getElementById('env-bpm-tag'),'ok','Waiting');tagEl(document.getElementById('env-spo2-tag'),'ok','Waiting');}
+  else{tagEl(document.getElementById('env-bpm-tag'),(d.heart_rate<50||d.heart_rate>115)?'bad':'ok',d.heart_rate+' BPM');tagEl(document.getElementById('env-spo2-tag'),(d.spo2<92)?'bad':(d.spo2<95)?'watch':'ok',d.spo2+' %');}
+  document.getElementById('v-temp').textContent=d.ambient_temp_c.toFixed(1)+' C';
+  document.getElementById('v-hum').textContent=Math.round(d.ambient_humidity)+' %';
+  document.getElementById('v-pres').textContent=d.pressure_hpa.toFixed(1)+' hPa';
+  document.getElementById('v-move').textContent=d.is_moving?'Active':'Still';
+  document.getElementById('v-lastmove').textContent=d.is_moving?'just now':Math.round(d.last_movement_min)+' min ago';
+  document.getElementById('heat-big').innerHTML=d.heat_index_c.toFixed(1)+' <span class="unit">C</span>';
+  document.getElementById('pres-big').innerHTML=d.pressure_hpa.toFixed(1)+' <span class="unit">hPa</span>';
+  document.getElementById('env-heat').textContent=d.heat_index_c.toFixed(1)+'C';
+  document.getElementById('env-fall').textContent=d.fall_detected?'Fall detected':(d.is_moving?'Active':Math.round(d.last_movement_min)+'m still');
+  drawSpark(document.getElementById('temp-chart'),state.temp,'#C0791F');
+  drawSpark(document.getElementById('pres-chart'),state.pressure,'#1F6F63');
+  let hl='ok';if(d.heat_index_c>41)hl='bad';else if(d.heat_index_c>37)hl='watch';
+  tagEl(document.getElementById('env-heat-tag'),hl,hl==='bad'?'Heat Wave':hl==='watch'?'Heat Watch':'Normal');
+  let fl=d.fall_detected?'bad':(d.last_movement_min>240?'watch':'ok');
+  tagEl(document.getElementById('env-fall-tag'),fl,d.fall_detected?'Possible Fall':d.is_moving?'Active':'Normal');
+  const riskWords=['Normal','Watch','Alert','Emergency'];
+  const riskSubs=['All readings within expected range','A reading is drifting outside typical range','Risk pattern detected - check patient','Immediate attention needed'];
+  const rl=d.risk_level||0;
+  const rw=document.getElementById('risk-word');
+  rw.textContent=riskWords[rl]||'Normal';
+  rw.className='status-word display '+(rl>=2?'emergency':rl===1?'watch':'normal');
+  document.getElementById('risk-sub').textContent=d.fall_detected?'Possible fall detected - check immediately':(riskSubs[rl]||riskSubs[0]);
+  if(rl>=1&&rl!==lastRiskLevel)addTimeline(rl>=2?'bad':'watch',riskWords[rl],riskSubs[rl]);
+  lastRiskLevel=rl;
+}
+connectWebSocket();
+window.addEventListener('resize',()=>{drawSpark(document.getElementById('temp-chart'),state.temp,'#C0791F');drawSpark(document.getElementById('pres-chart'),state.pressure,'#1F6F63');});
+</script>
+</body>
+</html>

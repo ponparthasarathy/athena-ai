@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Background Glow Accents -->
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+  <div class="bg-glow glow-3"></div>
+
+  <!-- EMERGENCY FULLSCREEN OVERLAY -->
+  <div id="emergency-overlay" class="emergency-overlay hidden">
+    <div class="emergency-modal">
+      <div class="emergency-icon-wrap">
+        <div class="emergency-pulse-ring"></div>
+        <svg class="emergency-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h2 id="emergency-title">CRITICAL EMERGENCY DETECTED</h2>
+      <p id="emergency-desc">Patient fall detected with sustained post-impact stillness. Immediate assistance required.</p>
+      
+      <div class="emergency-stats">
+        <div class="stat-pill"><span class="lbl">Heart Rate</span><span class="val" id="em-hr">-- BPM</span></div>
+        <div class="stat-pill"><span class="lbl">SpO2</span><span class="val" id="em-spo2">-- %</span></div>
+        <div class="stat-pill"><span class="lbl">Heat Index</span><span class="val" id="em-heat">-- °C</span></div>
+      </div>
+
+      <div class="emergency-actions">
+        <button id="btn-silence" class="btn btn-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+          Mute Alarm
+        </button>
+        <button id="btn-ack" class="btn btn-emergency">
+          Acknowledge & Dismiss
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-wrapper">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="logo-icon">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            <h1>SAHAAY</h1>
+            <span class="version-tag">AI HEALTH COMPANION</span>
+          </div>
+          <p class="brand-sub">Edge-Cloud Hybrid Medical Telemetry & Contextual Intelligence</p>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div class="device-pill">
+          <span class="dot-pulse" id="conn-indicator"></span>
+          <span class="dev-id" id="active-device-id">PHC-0001</span>
+          <span class="conn-status" id="conn-text">Connecting...</span>
+        </div>
+
+        <button id="btn-manual-eval" class="btn btn-ai" title="Trigger immediate Google Gemini Clinical Re-evaluation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" class="sparkle-icon">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <span>Evaluate with Gemini</span>
+        </button>
+
+        <button id="btn-toggle-sim" class="btn btn-secondary-sm" title="Toggle Hardware Simulation Bar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <span>Simulate</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Simulation Bar (Collapsible) -->
+    <div id="simulation-bar" class="simulation-bar">
+      <div class="sim-inner">
+        <div class="sim-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <b>Edge Telemetry Simulator:</b> Test end-to-end cloud processing & Gemini AI triggers instantly:
+        </div>
+        <div class="sim-buttons">
+          <button class="sim-btn" data-type="normal">Normal Resting</button>
+          <button class="sim-btn" data-type="active">Active Moving</button>
+          <button class="sim-btn sim-btn-danger" data-type="fall">⚠️ Fall & Stillness</button>
+          <button class="sim-btn sim-btn-danger" data-type="hypoxia">⚠️ Hypoxia (SpO2 88%)</button>
+          <button class="sim-btn sim-btn-warning" data-type="heatwave">🔥 Heatwave Strain</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN DASHBOARD CONTENT -->
+    <main class="dashboard-grid">
+      
+      <!-- PRIMARY GEMINI AI CLINICAL ADVISORY CARD -->
+      <section class="card ai-card" id="ai-advisory-card">
+        <div class="ai-card-header">
+          <div class="ai-title-wrap">
+            <div class="ai-avatar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a8 8 0 0 0-8 8c0 5 8 12 8 12s8-7 8-12a8 8 0 0 0-8-8z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <div>
+              <div class="ai-badge-row">
+                <h2>Dr. Sahaay AI Clinical Companion</h2>
+                <span class="ai-powered-tag">Powered by Google Gemini 2.5</span>
+              </div>
+              <p class="ai-subtitle" id="ai-timestamp">Synchronizing health assessment...</p>
+            </div>
+          </div>
+          
+          <div class="risk-badge-wrap">
+            <div class="risk-badge badge-normal" id="risk-pill">
+              <span class="risk-dot"></span>
+              <span class="risk-label" id="risk-text">NORMAL</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ai-card-body">
+          <!-- Summary Quote -->
+          <div class="ai-summary-box">
+            <p id="ai-summary" class="ai-summary-text">
+              "Analyzing patient vitals and environmental metrics in real-time. Baseline physiological state is stable."
+            </p>
+          </div>
+
+          <div class="ai-split-grid">
+            <!-- Actionable Advice -->
+            <div class="ai-panel">
+              <div class="panel-head">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                <h3>Actionable Clinical Advice</h3>
+              </div>
+              <div class="advice-content" id="ai-advice">
+                Maintain optimal hydration and continue gentle ambient monitoring.
+              </div>
+            </div>
+
+            <!-- Pathophysiological Assessment -->
+            <div class="ai-panel">
+              <div class="panel-head">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <h3>Multi-Sensor Clinical Rationale</h3>
+              </div>
+              <div class="rationale-content" id="ai-rationale">
+                Cardiac cadence and oxygen saturation correspond with restful homeostasis. Atmospheric and temperature variables remain within benign thresholds.
+              </div>
+            </div>
+          </div>
+
+          <!-- Detected Vital Flags -->
+          <div class="ai-flags-row" id="ai-flags-container">
+            <span class="flag-pill">HEMODYNAMIC_STABILITY</span>
+            <span class="flag-pill">NO_KINETIC_TRAUMA</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- REAL-TIME METRICS GRID -->
+      <section class="metrics-grid">
+        
+        <!-- Metric 1: Heart Rate -->
+        <div class="card metric-card">
+          <div class="metric-head">
+            <span class="metric-title">HEART RATE</span>
+            <div class="metric-icon-box heart-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            </div>
+          </div>
+          <div class="metric-main">
+            <span class="metric-value" id="val-hr">72</span>
+            <span class="metric-unit">BPM</span>
+          </div>
+          <div class="metric-footer">
+            <div class="ecg-pulse-line">
+              <svg viewBox="0 0 100 24" preserveAspectRatio="none" class="ecg-svg">
+                <path d="M0,12 L20,12 L25,12 L30,4 L35,20 L40,12 L45,12 L50,12 L55,2 L60,22 L65,12 L100,12" fill="none" stroke="var(--emerald)" stroke-width="2"/>
+              </svg>
+            </div>
+            <span class="metric-tag tag-normal" id="tag-hr">Resting Normal</span>
+          </div>
+        </div>
+
+        <!-- Metric 2: Blood Oxygen SpO2 -->
+        <div class="card metric-card">
+          <div class="metric-head">
+            <span class="metric-title">BLOOD OXYGEN (SpO2)</span>
+            <div class="metric-icon-box spo2-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            </div>
+          </div>
+          <div class="metric-main">
+            <span class="metric-value" id="val-spo2">98</span>
+            <span class="metric-unit">%</span>
+          </div>
+          <div class="metric-footer">
+            <div class="bar-progress-wrap">
+              <div class="bar-progress-fill" id="spo2-bar" style="width: 98%;"></div>
+            </div>
+            <span class="metric-tag tag-normal" id="tag-spo2">Optimal Saturation</span>
+          </div>
+        </div>
+
+        <!-- Metric 3: Heat Index -->
+        <div class="card metric-card">
+          <div class="metric-head">
+            <span class="metric-title">HEAT STRESS INDEX</span>
+            <div class="metric-icon-box heat-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+            </div>
+          </div>
+          <div class="metric-main">
+            <span class="metric-value" id="val-heat">27.2</span>
+            <span class="metric-unit">°C</span>
+          </div>
+          <div class="metric-footer">
+            <span class="metric-subtext">Temp + Humidity Combined</span>
+            <span class="metric-tag tag-normal" id="tag-heat">Safe Comfort</span>
+          </div>
+        </div>
+
+        <!-- Metric 4: Ambient Climate -->
+        <div class="card metric-card">
+          <div class="metric-head">
+            <span class="metric-title">AMBIENT CLIMATE</span>
+            <div class="metric-icon-box env-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+            </div>
+          </div>
+          <div class="metric-main climate-dual">
+            <div>
+              <span class="metric-value-sm" id="val-temp">26.5</span><span class="metric-unit-sm">°C</span>
+            </div>
+            <div class="divider-v"></div>
+            <div>
+              <span class="metric-value-sm" id="val-humidity">55</span><span class="metric-unit-sm">% RH</span>
+            </div>
+          </div>
+          <div class="metric-footer">
+            <span class="metric-subtext">BME280 Precision Sensors</span>
+            <span class="metric-tag tag-normal" id="tag-env">Pleasant</span>
+          </div>
+        </div>
+
+        <!-- Metric 5: Barometric Pressure -->
+        <div class="card metric-card">
+          <div class="metric-head">
+            <span class="metric-title">ATMOSPHERIC PRESSURE</span>
+            <div class="metric-icon-box pres-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4"/><path d="M12 16V8"/></svg>
+            </div>
+          </div>
+          <div class="metric-main">
+            <span class="metric-value" id="val-pres">1013.2</span>
+            <span class="metric-unit">hPa</span>
+          </div>
+          <div class="metric-footer">
+            <span class="metric-subtext">Baseline Altitude Reference</span>
+            <span class="metric-tag tag-normal">Standard Sea Level</span>
+          </div>
+        </div>
+
+        <!-- Metric 6: Motion & Fall Safety -->
+        <div class="card metric-card">
+          <div class="metric-head">
+            <span class="metric-title">MOTION & FALL SAFETY</span>
+            <div class="metric-icon-box motion-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="5" r="2"/><path d="m9 20 3-6 3 6"/><path d="m6 8 6 2 6-2"/><path d="M12 10v4"/></svg>
+            </div>
+          </div>
+          <div class="metric-main">
+            <span class="metric-value-text" id="val-motion">Stationary</span>
+          </div>
+          <div class="metric-footer">
+            <span class="metric-subtext" id="val-still-time">Still for 1.2 min</span>
+            <span class="metric-tag tag-normal" id="tag-fall">No Fall Detected</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- TIME-SERIES SPARKLINE CHARTS -->
+      <section class="charts-grid">
+        
+        <!-- Chart 1: Vitals Timeline -->
+        <div class="card chart-card">
+          <div class="chart-head">
+            <div>
+              <h3>Cardiopulmonary Vitals Real-Time Trend</h3>
+              <p>Continuous Heart Rate (BPM) & Blood Oxygen Saturation (%)</p>
+            </div>
+            <div class="chart-legend">
+              <span class="leg-item"><span class="leg-dot color-hr"></span> Heart Rate</span>
+              <span class="leg-item"><span class="leg-dot color-spo2"></span> SpO2 %</span>
+            </div>
+          </div>
+          <div class="canvas-container">
+            <canvas id="vitals-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Environmental Trends -->
+        <div class="card chart-card">
+          <div class="chart-head">
+            <div>
+              <h3>Environmental Heat Index & Barometric Pressure</h3>
+              <p>Steadman Heat Stress Index (°C) & Pressure (hPa)</p>
+            </div>
+            <div class="chart-legend">
+              <span class="leg-item"><span class="leg-dot color-heat"></span> Heat Index</span>
+              <span class="leg-item"><span class="leg-dot color-pres"></span> Pressure</span>
+            </div>
+          </div>
+          <div class="canvas-container">
+            <canvas id="env-chart"></canvas>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div>
+        <span>Sahaay IoT Health Ecosystem · Architecture: ESP32 Edge (WROOM-32) + HiveMQ MQTT + FastAPI + Google Gemini 2.5</span>
+      </div>
+      <div class="footer-stats">
+        <span>Packets Processed: <b id="stat-pkt-count">0</b></span>
+        <span>•</span>
+        <span>Latency: <b id="stat-latency">&lt; 15 ms</b></span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Audio Context Alarm Generator -->
+  <script src="app.js"></script>
+</body>
+</html>
