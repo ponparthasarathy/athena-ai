@@ -466,6 +466,31 @@ def on_mqtt_message(client, userdata, msg):
         if "timestamp" not in data or not data["timestamp"]:
             data["timestamp"] = datetime.now(timezone.utc).isoformat()
 
+        # Clean & normalize all numeric and boolean fields
+        num_float_fields = ["ambient_temp_c", "ambient_humidity", "pressure_hpa", "heat_index_c", "last_movement_min", "accel_magnitude"]
+        for field in num_float_fields:
+            if field in data and data[field] is not None:
+                try:
+                    data[field] = float(data[field])
+                except (ValueError, TypeError):
+                    data[field] = 0.0
+
+        num_int_fields = ["heart_rate", "spo2", "seq", "risk_level", "rssi"]
+        for field in num_int_fields:
+            if field in data and data[field] is not None:
+                try:
+                    data[field] = int(float(data[field]))
+                except (ValueError, TypeError):
+                    data[field] = 0
+
+        bool_fields = ["finger_detected", "is_moving", "fall_detected", "is_emergency"]
+        for field in bool_fields:
+            if field in data and data[field] is not None:
+                if isinstance(data[field], str):
+                    data[field] = data[field].lower() in ["true", "1"]
+                else:
+                    data[field] = bool(data[field])
+
         if topic.endswith("/status"):
             dev = registry.get_or_create(device_id)
             dev.status = data.get("status", "unknown")
@@ -484,6 +509,7 @@ def on_mqtt_message(client, userdata, msg):
         # Store telemetry
         dev = registry.get_or_create(device_id)
         dev.add_telemetry(data)
+        logger.info(f"[TELEMETRY RECEIVED] Device={device_id} HR={data.get('heart_rate')} SpO2={data.get('spo2')} Temp={data.get('ambient_temp_c')}C HI={data.get('heat_index_c')}C")
 
         # Broadcast telemetry to web clients in real time
         if loop_ref and loop_ref.is_running():

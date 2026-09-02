@@ -261,39 +261,66 @@ function renderAIAdvisory(advisory){
     <div class="ai-flags">${flags}</div>`;
   if(advisory.risk_level==='EMERGENCY'||advisory.risk_level==='ALERT')addTimeline('bad','AI: '+advisory.risk_level,(advisory.summary||'').substring(0,80)+'...');
 }
+function num(v, def=0){ const n = parseFloat(v); return isNaN(n) ? def : n; }
 function renderLiveReading(d){
-  pushCapped(state.temp,d.heat_index_c);pushCapped(state.pressure,d.pressure_hpa);
-  const hf=d.finger_detected;
-  document.getElementById('v-bpm').textContent=(hf&&d.heart_rate>0)?(d.heart_rate+' bpm'):'--';
-  document.getElementById('v-spo2').textContent=(hf&&d.spo2>0)?(d.spo2+' %'):'--';
-  document.getElementById('env-bpm').textContent=(hf&&d.heart_rate>0)?(d.heart_rate+' bpm'):'No finger';
-  document.getElementById('env-spo2').textContent=(hf&&d.spo2>0)?(d.spo2+' %'):'No finger';
-  if(!hf){tagEl(document.getElementById('env-bpm-tag'),'ok','Waiting');tagEl(document.getElementById('env-spo2-tag'),'ok','Waiting');}
-  else{tagEl(document.getElementById('env-bpm-tag'),(d.heart_rate<50||d.heart_rate>115)?'bad':'ok',d.heart_rate+' BPM');tagEl(document.getElementById('env-spo2-tag'),(d.spo2<92)?'bad':(d.spo2<95)?'watch':'ok',d.spo2+' %');}
-  document.getElementById('v-temp').textContent=d.ambient_temp_c.toFixed(1)+' C';
-  document.getElementById('v-hum').textContent=Math.round(d.ambient_humidity)+' %';
-  document.getElementById('v-pres').textContent=d.pressure_hpa.toFixed(1)+' hPa';
-  document.getElementById('v-move').textContent=d.is_moving?'Active':'Still';
-  document.getElementById('v-lastmove').textContent=d.is_moving?'just now':Math.round(d.last_movement_min)+' min ago';
-  document.getElementById('heat-big').innerHTML=d.heat_index_c.toFixed(1)+' <span class="unit">C</span>';
-  document.getElementById('pres-big').innerHTML=d.pressure_hpa.toFixed(1)+' <span class="unit">hPa</span>';
-  document.getElementById('env-heat').textContent=d.heat_index_c.toFixed(1)+'C';
-  document.getElementById('env-fall').textContent=d.fall_detected?'Fall detected':(d.is_moving?'Active':Math.round(d.last_movement_min)+'m still');
-  drawSpark(document.getElementById('temp-chart'),state.temp,'#C0791F');
-  drawSpark(document.getElementById('pres-chart'),state.pressure,'#1F6F63');
-  let hl='ok';if(d.heat_index_c>41)hl='bad';else if(d.heat_index_c>37)hl='watch';
-  tagEl(document.getElementById('env-heat-tag'),hl,hl==='bad'?'Heat Wave':hl==='watch'?'Heat Watch':'Normal');
-  let fl=d.fall_detected?'bad':(d.last_movement_min>240?'watch':'ok');
-  tagEl(document.getElementById('env-fall-tag'),fl,d.fall_detected?'Possible Fall':d.is_moving?'Active':'Normal');
-  const riskWords=['Normal','Watch','Alert','Emergency'];
-  const riskSubs=['All readings within expected range','A reading is drifting outside typical range','Risk pattern detected - check patient','Immediate attention needed'];
-  const rl=d.risk_level||0;
-  const rw=document.getElementById('risk-word');
-  rw.textContent=riskWords[rl]||'Normal';
-  rw.className='status-word display '+(rl>=2?'emergency':rl===1?'watch':'normal');
-  document.getElementById('risk-sub').textContent=d.fall_detected?'Possible fall detected - check immediately':(riskSubs[rl]||riskSubs[0]);
-  if(rl>=1&&rl!==lastRiskLevel)addTimeline(rl>=2?'bad':'watch',riskWords[rl],riskSubs[rl]);
-  lastRiskLevel=rl;
+  if (!d) return;
+  const heatC = num(d.heat_index_c, 0);
+  const presHpa = num(d.pressure_hpa, 0);
+  const tempC = num(d.ambient_temp_c, 0);
+  const hum = num(d.ambient_humidity, 0);
+  const hr = Math.round(num(d.heart_rate, 0));
+  const spo2 = Math.round(num(d.spo2, 0));
+  const lastMove = num(d.last_movement_min, 0);
+  const isMoving = Boolean(d.is_moving);
+  const isFall = Boolean(d.fall_detected);
+  const hf = Boolean(d.finger_detected);
+
+  pushCapped(state.temp, heatC);
+  pushCapped(state.pressure, presHpa);
+
+  document.getElementById('v-bpm').textContent = (hf && hr > 0) ? (hr + ' bpm') : '--';
+  document.getElementById('v-spo2').textContent = (hf && spo2 > 0) ? (spo2 + ' %') : '--';
+  document.getElementById('env-bpm').textContent = (hf && hr > 0) ? (hr + ' bpm') : 'No finger';
+  document.getElementById('env-spo2').textContent = (hf && spo2 > 0) ? (spo2 + ' %') : 'No finger';
+
+  if (!hf) {
+    tagEl(document.getElementById('env-bpm-tag'), 'ok', 'Waiting');
+    tagEl(document.getElementById('env-spo2-tag'), 'ok', 'Waiting');
+  } else {
+    tagEl(document.getElementById('env-bpm-tag'), (hr < 50 || hr > 115) ? 'bad' : 'ok', hr + ' BPM');
+    tagEl(document.getElementById('env-spo2-tag'), (spo2 < 92) ? 'bad' : (spo2 < 95) ? 'watch' : 'ok', spo2 + ' %');
+  }
+
+  document.getElementById('v-temp').textContent = tempC.toFixed(1) + ' C';
+  document.getElementById('v-hum').textContent = Math.round(hum) + ' %';
+  document.getElementById('v-pres').textContent = presHpa.toFixed(1) + ' hPa';
+  document.getElementById('v-move').textContent = isMoving ? 'Active' : 'Still';
+  document.getElementById('v-lastmove').textContent = isMoving ? 'just now' : Math.round(lastMove) + ' min ago';
+  document.getElementById('heat-big').innerHTML = heatC.toFixed(1) + ' <span class="unit">C</span>';
+  document.getElementById('pres-big').innerHTML = presHpa.toFixed(1) + ' <span class="unit">hPa</span>';
+  document.getElementById('env-heat').textContent = heatC.toFixed(1) + 'C';
+  document.getElementById('env-fall').textContent = isFall ? 'Fall detected' : (isMoving ? 'Active' : Math.round(lastMove) + 'm still');
+
+  drawSpark(document.getElementById('temp-chart'), state.temp, '#C0791F');
+  drawSpark(document.getElementById('pres-chart'), state.pressure, '#1F6F63');
+
+  let hl = 'ok';
+  if (heatC > 41) hl = 'bad';
+  else if (heatC > 37) hl = 'watch';
+  tagEl(document.getElementById('env-heat-tag'), hl, hl === 'bad' ? 'Heat Wave' : hl === 'watch' ? 'Heat Watch' : 'Normal');
+
+  let fl = isFall ? 'bad' : (lastMove > 240 ? 'watch' : 'ok');
+  tagEl(document.getElementById('env-fall-tag'), fl, isFall ? 'Possible Fall' : isMoving ? 'Active' : 'Normal');
+
+  const riskWords = ['Normal', 'Watch', 'Alert', 'Emergency'];
+  const riskSubs = ['All readings within expected range', 'A reading is drifting outside typical range', 'Risk pattern detected - check patient', 'Immediate attention needed'];
+  const rl = parseInt(d.risk_level) || 0;
+  const rw = document.getElementById('risk-word');
+  rw.textContent = riskWords[rl] || 'Normal';
+  rw.className = 'status-word display ' + (rl >= 2 ? 'emergency' : rl === 1 ? 'watch' : 'normal');
+  document.getElementById('risk-sub').textContent = isFall ? 'Possible fall detected - check immediately' : (riskSubs[rl] || riskSubs[0]);
+  if (rl >= 1 && rl !== lastRiskLevel) addTimeline(rl >= 2 ? 'bad' : 'watch', riskWords[rl], riskSubs[rl]);
+  lastRiskLevel = rl;
 }
 connectWebSocket();
 window.addEventListener('resize',()=>{drawSpark(document.getElementById('temp-chart'),state.temp,'#C0791F');drawSpark(document.getElementById('pres-chart'),state.pressure,'#1F6F63');});
