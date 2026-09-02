@@ -105,6 +105,7 @@ bool fingerDetected = false;
 bool isMoving = false;
 bool fallDetected = false;
 unsigned long lastMotionAt = 0;
+unsigned long motionActiveUntil = 0;
 unsigned long fallFlagUntil = 0;
 float lastVectorMagnitude = 1.0;
 
@@ -429,11 +430,15 @@ void sampleIMU50Hz() {
   float mag = sqrt(ax_g * ax_g + ay_g * ay_g + az_g * az_g);
   lastVectorMagnitude = mag;
 
-  // Dynamic Movement Threshold (deviation from 1.0g gravity baseline)
-  isMoving = fabs(mag - 1.0) > 0.12;
-  if (isMoving) {
+  // Dynamic Micro-Movement Detection (Accelerometer variance & Gyroscope angular velocity fusion)
+  bool accelMotion = fabs(mag - 1.0) > 0.035; // Sensitive to subtle taps and tremors (was 0.12)
+  bool gyroMotion = (abs(gx_raw) > 220 || abs(gy_raw) > 220 || abs(gz_raw) > 220); // Sensitive to slight wrist tilts/rotations
+
+  if (accelMotion || gyroMotion) {
     lastMotionAt = millis();
+    motionActiveUntil = millis() + 4000; // Latch motion state for 4 seconds
   }
+  isMoving = (millis() < motionActiveUntil);
 
   // --- Fall Detection State Machine ---
   // Phase 1: High-g freefall impact detection (> 2.6g threshold)
