@@ -738,4 +738,6 @@ if __name__ == "__main__":
     print(f"\n==================================================")
     print(f"  ATHENA CLOUD SERVER STARTING ON http://{HOST}:{PORT}")
     print(f"==================================================\n")
-    uvicorn.run("server:app", host=HOST, port=PORT, reload=True)
+    # reload=True only for local dev — disabled in production (causes "too many open files" in Docker)
+    is_dev = os.getenv("ENV", "production") == "development"
+    uvicorn.run("server:app", host=HOST, port=PORT, reload=is_dev)
