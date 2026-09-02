@@ -491,7 +491,8 @@ def on_mqtt_message(client, userdata, msg):
                 ws_manager.broadcast_json({
                     "type": "TELEMETRY",
                     "device_id": device_id,
-                    "data": data
+                    "data": data,
+                    "telemetry": data
                 }),
                 loop_ref
             )
@@ -509,6 +510,15 @@ mqtt_client.on_message = on_mqtt_message
 
 if MQTT_USERNAME:
     mqtt_client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+
+# Enable TLS when using HiveMQ Cloud or port 8883
+if MQTT_BROKER_PORT == 8883 or "hivemq.cloud" in MQTT_BROKER_HOST:
+    import ssl
+    try:
+        mqtt_client.tls_set(cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS_CLIENT)
+        logger.info("[MQTT] Configured TLS v1.2/1.3 for secure HiveMQ Cloud connection.")
+    except Exception as e:
+        logger.warning(f"[MQTT] TLS configuration note: {e}")
 
 
 # ======================================================================================

@@ -172,20 +172,45 @@ function nextSimReading(){
 function startSimulation(){stopSimulation();document.getElementById('demo-banner').style.display='flex';setConnBadge(false,true);simTimer=setInterval(()=>renderLiveReading(nextSimReading()),1000);renderLiveReading(nextSimReading());}
 function stopSimulation(){if(simTimer)clearInterval(simTimer);simTimer=null;}
 function connectWebSocket(){
-  const url=DEVICE_WS_URL||`ws://${location.host}/ws`;
-  try{socket=new WebSocket(url);}catch(e){scheduleReconnect();return;}
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = DEVICE_WS_URL || `${proto}//${location.host}/ws`;
+  try{socket=new WebSocket(url);}catch(e){console.error('WS create error:',e);scheduleReconnect();return;}
   clearTimeout(simConnectTimeout);
-  simConnectTimeout=setTimeout(()=>{if(!usingLiveData)startSimulation();},2500);
-  socket.onopen=()=>{usingLiveData=true;stopSimulation();document.getElementById('demo-banner').style.display='none';setConnBadge(true);};
-  socket.onclose=()=>{usingLiveData=false;setConnBadge(false);scheduleReconnect();};
-  socket.onerror=()=>{socket.close();};
+  simConnectTimeout=setTimeout(()=>{if(!usingLiveData)startSimulation();},3000);
+  socket.onopen=()=>{
+    usingLiveData=true;
+    stopSimulation();
+    document.getElementById('demo-banner').style.display='none';
+    setConnBadge(true);
+    console.log('[ATHENA WS] Connected to live backend at', url);
+  };
+  socket.onclose=()=>{
+    usingLiveData=false;
+    setConnBadge(false);
+    console.warn('[ATHENA WS] Disconnected, scheduling reconnect...');
+    scheduleReconnect();
+  };
+  socket.onerror=(err)=>{console.error('[ATHENA WS] Error:', err); socket.close();};
   socket.onmessage=(evt)=>{
     try{
       const msg=JSON.parse(evt.data);
-      if(msg.type==='TELEMETRY_UPDATE'&&msg.telemetry)renderLiveReading(msg.telemetry);
-      else if(msg.type==='AI_ADVISORY'&&msg.advisory)renderAIAdvisory(msg.advisory);
-      else if(msg.type==='INITIAL_STATE'&&msg.devices&&msg.devices.length>0){const dev=msg.devices[0];if(dev.telemetry)renderLiveReading(dev.telemetry);if(dev.advisory)renderAIAdvisory(dev.advisory);document.getElementById('device-label').textContent=dev.device_id||'PHC-0001';}
-      else if(msg.ambient_temp_c!==undefined)renderLiveReading(msg);
+      const tel = msg.telemetry || msg.data || (msg.ambient_temp_c !== undefined ? msg : null);
+      if ((msg.type === 'TELEMETRY' || msg.type === 'TELEMETRY_UPDATE') && tel) {
+        renderLiveReading(tel);
+      }
+      else if(msg.type==='AI_ADVISORY'&&msg.advisory) {
+        renderAIAdvisory(msg.advisory);
+      }
+      else if(msg.type==='INITIAL_STATE'&&msg.devices&&msg.devices.length>0){
+        const dev=msg.devices[0];
+        const devTel = dev.latest_telemetry || dev.telemetry;
+        if(devTel) renderLiveReading(devTel);
+        if(dev.advisory || dev.latest_advisory) renderAIAdvisory(dev.advisory || dev.latest_advisory);
+        document.getElementById('device-label').textContent=dev.device_id||'PHC-0001';
+      }
+      else if(tel) {
+        renderLiveReading(tel);
+      }
     }catch(e){console.error('Bad payload',e);}
   };
 }
