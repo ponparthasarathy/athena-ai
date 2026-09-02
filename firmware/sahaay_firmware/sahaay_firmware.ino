@@ -105,7 +105,6 @@ bool fingerDetected = false;
 bool isMoving = false;
 bool fallDetected = false;
 unsigned long lastMotionAt = 0;
-unsigned long motionActiveUntil = 0;
 unsigned long fallFlagUntil = 0;
 float lastVectorMagnitude = 1.0;
 
@@ -430,15 +429,11 @@ void sampleIMU50Hz() {
   float mag = sqrt(ax_g * ax_g + ay_g * ay_g + az_g * az_g);
   lastVectorMagnitude = mag;
 
-  // Dynamic Micro-Movement Detection (Accelerometer variance & Gyroscope angular velocity fusion)
-  bool accelMotion = fabs(mag - 1.0) > 0.035; // Sensitive to subtle taps and tremors (was 0.12)
-  bool gyroMotion = (abs(gx_raw) > 220 || abs(gy_raw) > 220 || abs(gz_raw) > 220); // Sensitive to slight wrist tilts/rotations
-
-  if (accelMotion || gyroMotion) {
+  // Dynamic Movement Threshold (deviation from 1.0g gravity baseline)
+  isMoving = fabs(mag - 1.0) > 0.12;
+  if (isMoving) {
     lastMotionAt = millis();
-    motionActiveUntil = millis() + 4000; // Latch motion state for 4 seconds
   }
-  isMoving = (millis() < motionActiveUntil);
 
   // --- Fall Detection State Machine ---
   // Phase 1: High-g freefall impact detection (> 2.6g threshold)
@@ -476,15 +471,25 @@ void sampleIMU50Hz() {
 // ======================================================================================
 // BME280 ENVIRONMENTAL SENSING & HEAT INDEX CALCULATION
 // ======================================================================================
+// ======================================================================================
+// BME280 ENVIRONMENTAL SENSING & HEAT INDEX CALCULATION
+// ======================================================================================
 void readEnvironmentalSensors() {
-  tempC = bme.readTemperature();
-  humidity = bme.readHumidity();
-  pressureHpa = bme.readPressure() / 100.0F; // Pa to hPa
+  if (!bmeReady) return;
+  float t = bme.readTemperature();
+  float h = bme.readHumidity();
+  float p = bme.readPressure() / 100.0F; // Pa to hPa
+
+  if (!isnan(t) && t > -40.0 && t < 85.0) tempC = t;
+  if (!isnan(h) && h >= 0.0 && h <= 100.0) humidity = h;
+  if (!isnan(p) && p > 300.0 && p < 1200.0) pressureHpa = p;
+
   heatIndexC = computeHeatIndex(tempC, humidity);
 }
 
 // NOAA / Steadman Heat Index Equation
 float computeHeatIndex(float tC, float rh) {
+  if (tC < 20.0 || rh < 1.0) return tC; // Heat index only meaningful above 20C
   float tF = tC * 9.0 / 5.0 + 32.0;
   float hiF = -42.379 + 2.04901523 * tF + 10.14333127 * rh
               - 0.22475541 * tF * rh - 0.00683783 * tF * tF
@@ -519,7 +524,6 @@ void renderOLED() {
 
   // --- 1. CRITICAL EMERGENCY: FALL DETECTED ---
   if (fallDetected) {
-    // Inverted emergency banner
     display.fillRect(0, 0, 128, 14, SSD1306_WHITE);
     display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     display.setTextSize(1);
@@ -603,7 +607,6 @@ void renderOLED() {
   }
 
   // --- 5. STANDARD MONITORING DASHBOARD (NORMAL / WATCH) ---
-  // Top Title Bar
   display.fillRect(0, 0, 128, 12, SSD1306_WHITE);
   display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
   display.setTextSize(1);
@@ -678,17 +681,17 @@ void publishTelemetry(bool isImmediateAnomaly) {
   StaticJsonDocument<512> doc;
   doc["device_id"]         = DEVICE_ID;
   doc["seq"]               = packetCounter;
-  doc["ambient_temp_c"]    = serialized(String(tempC, 2));
-  doc["ambient_humidity"]  = serialized(String(humidity, 1));
-  doc["pressure_hpa"]      = serialized(String(pressureHpa, 1));
-  doc["heat_index_c"]      = serialized(String(heatIndexC, 2));
+  doc["ambient_temp_c"]    = round(tempC * 100.0) / 100.0;
+  doc["ambient_humidity"]  = round(humidity * 10.0) / 10.0;
+  doc["pressure_hpa"]      = round(pressureHpa * 10.0) / 10.0;
+  doc["heat_index_c"]      = round(heatIndexC * 100.0) / 100.0;
   doc["heart_rate"]        = beatAvg;
   doc["spo2"]              = spo2Approx;
   doc["finger_detected"]   = fingerDetected;
   doc["is_moving"]         = isMoving;
-  doc["last_movement_min"] = serialized(String(lastMovementMin, 2));
+  doc["last_movement_min"] = round(lastMovementMin * 100.0) / 100.0;
   doc["fall_detected"]     = fallDetected;
-  doc["accel_magnitude"]   = serialized(String(lastVectorMagnitude, 2));
+  doc["accel_magnitude"]   = round(lastVectorMagnitude * 100.0) / 100.0;
   doc["risk_level"]        = (int)currentRisk;
   doc["is_emergency"]      = (currentRisk == RISK_EMERGENCY || isImmediateAnomaly);
   doc["rssi"]              = WiFi.RSSI();
@@ -698,8 +701,14 @@ void publishTelemetry(bool isImmediateAnomaly) {
 
   bool pubOk = mqttClient.publish(MQTT_TOPIC_PUB, jsonBuffer, len);
   if (pubOk) {
-    Serial.printf("[MQTT PUB %s] Packet #%lu sent (%u bytes)\n",
-                  isImmediateAnomaly ? "PRIORITY" : "ROUTINE", packetCounter, len);
+    Serial.printf("[MQTT PUB %s] #%lu | HR:%d SpO2:%d%% Temp:%.1fC HI:%.1fC Mot:%s\n",
+                  isImmediateAnomaly ? "EMERGENCY" : "ROUTINE",
+                  packetCounter,
+                  beatAvg,
+                  spo2Approx,
+                  tempC,
+                  heatIndexC,
+                  isMoving ? "Active" : "Still");
   } else {
     Serial.println("[MQTT PUB ERROR] Failed to deliver telemetry payload.");
   }
