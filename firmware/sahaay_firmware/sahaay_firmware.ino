@@ -506,11 +506,98 @@ RiskLevel evaluateEdgeRisk() {
 }
 
 // ======================================================================================
-// LOCAL SSD1306 OLED RENDERING
+// LOCAL SSD1306 OLED RENDERING WITH REAL-TIME ON-DEVICE ADVISORY
 // ======================================================================================
 void renderOLED() {
   display.clearDisplay();
+  display.setTextWrap(false);
 
+  // --- 1. CRITICAL EMERGENCY: FALL DETECTED ---
+  if (fallDetected) {
+    // Inverted emergency banner
+    display.fillRect(0, 0, 128, 14, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setCursor(6, 3);
+    display.print("!! FALL DETECTED !!");
+
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(2, 18);
+    display.print("* Cloud alert sent!");
+    display.setCursor(2, 29);
+    display.print("> 1. Stay calm & still");
+    display.setCursor(2, 40);
+    display.print("> 2. Breathe slowly");
+    display.setCursor(2, 52);
+    display.printf("HR:%d | SpO2:%d%%", beatAvg, spo2Approx > 0 ? spo2Approx : 0);
+    display.display();
+    return;
+  }
+
+  // --- 2. CRITICAL ANOMALY: HYPOXIA (SpO2 < 90%) ---
+  if (fingerDetected && spo2Approx > 0 && spo2Approx < 90) {
+    display.fillRect(0, 0, 128, 14, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setCursor(6, 3);
+    display.printf("! LOW OXYGEN: %d%% !", spo2Approx);
+
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(2, 18);
+    display.print("> Sit upright now");
+    display.setCursor(2, 30);
+    display.print("> Deep belly breaths");
+    display.setCursor(2, 42);
+    display.print("> Loosen tight wear");
+    display.setCursor(2, 54);
+    display.print("Seek medical help");
+    display.display();
+    return;
+  }
+
+  // --- 3. HIGH RISK: ABNORMAL HEART RATE (>125 or <45 BPM) ---
+  if (fingerDetected && (beatAvg > 125 || (beatAvg > 0 && beatAvg < 45))) {
+    display.fillRect(0, 0, 128, 14, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setCursor(4, 3);
+    display.printf("! PULSE ALERT: %d !", beatAvg);
+
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(2, 18);
+    display.print("> Stop moving & sit");
+    display.setCursor(2, 30);
+    display.print("> Sip cool water");
+    display.setCursor(2, 42);
+    display.print("> Rest for 5 mins");
+    display.setCursor(2, 54);
+    display.printf("HI:%.1fC | SpO2:%d%%", heatIndexC, spo2Approx);
+    display.display();
+    return;
+  }
+
+  // --- 4. ENVIRONMENTAL STRAIN: SEVERE HEAT INDEX (> 40°C) ---
+  if (heatIndexC >= 40.0) {
+    display.fillRect(0, 0, 128, 14, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setCursor(4, 3);
+    display.printf("! HEAT RISK: %.1fC !", heatIndexC);
+
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(2, 18);
+    display.print("> High heat stroke risk");
+    display.setCursor(2, 30);
+    display.print("> Move to cool shade/fan");
+    display.setCursor(2, 42);
+    display.print("> Drink water & ORS");
+    display.setCursor(2, 54);
+    display.printf("Temp:%.1fC H:%.0f%%", tempC, humidity);
+    display.display();
+    return;
+  }
+
+  // --- 5. STANDARD MONITORING DASHBOARD (NORMAL / WATCH) ---
   // Top Title Bar
   display.fillRect(0, 0, 128, 12, SSD1306_WHITE);
   display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
@@ -531,29 +618,22 @@ void renderOLED() {
   display.setTextColor(SSD1306_WHITE);
 
   // Left Section: PPG Vitals
-  if (fallDetected) {
-    display.setCursor(2, 20);
-    display.setTextSize(2);
-    display.print("! FALL !");
-    display.setTextSize(1);
-    display.setCursor(2, 44);
-    display.print("STILLNESS DETECTED");
-  } else if (!fingerDetected) {
-    display.setCursor(2, 20);
+  if (!fingerDetected) {
+    display.setCursor(2, 18);
     display.setTextSize(1);
     display.println("Place finger");
-    display.setCursor(2, 34);
-    display.println("on sensor...");
-    display.setCursor(2, 50);
-    display.printf("Motion:%s", isMoving ? "Active" : "Still");
+    display.setCursor(2, 30);
+    display.println("on MAX30102");
+    display.setCursor(2, 46);
+    display.printf("Mot:%s", isMoving ? "Active" : "Rest");
   } else {
     display.setCursor(2, 16);
     display.setTextSize(1);
     display.printf("HR: %dbpm", beatAvg);
     
-    display.setCursor(2, 30);
+    display.setCursor(2, 29);
     display.print("SpO2:");
-    display.setCursor(2, 44);
+    display.setCursor(2, 42);
     display.setTextSize(2);
     if (spo2Approx > 0) {
       display.printf("%d%%", spo2Approx);
