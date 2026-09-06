@@ -434,7 +434,7 @@ async def request_gemini_advisory(device_id: str, trigger_reason: str) -> Option
     except Exception as mq_err:
         logger.warning(f"[MQTT ADVISORY ERROR] Failed to dispatch advisory to ESP32: {mq_err}")
 
-    if ai_result.get("risk_level") == "EMERGENCY":
+    if ai_result.get("risk_level") in ["EMERGENCY", "ALERT"]:
         dispatch_emergency_sms_alert(device_id, ai_result.get("summary", "HEALTH EMERGENCY"), ai_result.get("actionable_advice", "Check patient immediately."))
 
     return ai_result

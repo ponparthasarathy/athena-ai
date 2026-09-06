@@ -15,10 +15,17 @@ import time
 import math
 import random
 from datetime import datetime, timezone
+from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
+
+# Load environment variables
+env_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=env_path) if os.path.exists(env_path) else load_dotenv()
 
 MQTT_BROKER = os.getenv("MQTT_BROKER_HOST", "broker.hivemq.com")
 MQTT_PORT = int(os.getenv("MQTT_BROKER_PORT", "1883"))
+MQTT_USER = os.getenv("MQTT_USERNAME", "")
+MQTT_PASS = os.getenv("MQTT_PASSWORD", "")
 DEVICE_ID = os.getenv("DEVICE_ID", "PHC-0001")
 TOPIC = f"athena/device/{DEVICE_ID}/telemetry"
 
@@ -29,10 +36,17 @@ print(f"   Target Device: {DEVICE_ID}")
 print("==================================================")
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"Athena-Sim-{random.randint(1000, 9999)}")
+if MQTT_USER:
+    client.username_pw_set(MQTT_USER, MQTT_PASS)
+
+if MQTT_PORT == 8883 or "hivemq.cloud" in MQTT_BROKER:
+    import ssl
+    client.tls_set(cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS_CLIENT)
+
 try:
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_start()
-    print("[OK] Connected to MQTT broker.")
+    print("[OK] Connected to MQTT broker successfully.")
 except Exception as e:
     print(f"[ERROR] Failed to connect: {e}")
     sys.exit(1)
@@ -112,7 +126,7 @@ def run_interactive():
         elif choice == "4":
             publish_packet("HYPOXIA EMERGENCY", seq=seq, heart_rate=98, spo2=88, is_emergency=True, risk_level=3)
         elif choice == "5":
-            publish_packet("HEAT STRESS ALERT", seq=seq, temp_c=39.2, humidity=68.0, heart_rate=114, is_emergency=False, risk_level=2)
+            publish_packet("HEATWAVE EMERGENCY", seq=seq, temp_c=42.6, humidity=78.0, heart_rate=123, is_emergency=True, risk_level=3)
         elif choice == "6":
             publish_packet("FLOOD INUNDATION ALERT", seq=seq, temp_c=25.0, humidity=94.0, pressure=1002.5, heart_rate=92, risk_level=2)
         elif choice == "7":
