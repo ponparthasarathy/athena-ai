@@ -440,14 +440,46 @@ async def request_gemini_advisory(device_id: str, trigger_reason: str) -> Option
     return ai_result
 
 
-def dispatch_emergency_sms_alert(device_id: str, title: str, advice: str):
+def _format_advice_bullet_points(raw_advice) -> str:
+    """Parses raw advice (string, list, or stringified list) into clean, spaced bullet points."""
+    if isinstance(raw_advice, list):
+        items = raw_advice
+    elif isinstance(raw_advice, str):
+        advice_str = raw_advice.strip()
+        if advice_str.startswith("[") and advice_str.endswith("]"):
+            try:
+                import json, ast
+                try:
+                    items = json.loads(advice_str)
+                except Exception:
+                    items = ast.literal_eval(advice_str)
+            except Exception:
+                items = [advice_str]
+        else:
+            items = [advice_str]
+    else:
+        items = [str(raw_advice)]
+
+    cleaned_items = []
+    for item in items:
+        clean_text = str(item).strip().replace("<", "&lt;").replace(">", "&gt;")
+        if clean_text:
+            cleaned_items.append(f"• {clean_text}")
+
+    if not cleaned_items:
+        return "• Check patient immediately."
+    
+    return "\n\n".join(cleaned_items)
+
+
+def dispatch_emergency_sms_alert(device_id: str, title: str, advice):
     """Dispatches live Telegram & WhatsApp Cloud Gateway alerts with dynamic emergency parameters."""
     caregiver_phone = os.getenv("CAREGIVER_PHONE", "+919486483868")
     
     # Escape HTML special chars for Telegram HTML parse_mode
     clean_device_id = str(device_id).replace("<", "&lt;").replace(">", "&gt;")
     clean_title = str(title).replace("<", "&lt;").replace(">", "&gt;")
-    clean_advice = str(advice).replace("<", "&lt;").replace(">", "&gt;")
+    formatted_actions = _format_advice_bullet_points(advice)
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     message_text = f"🚨 ATHENA HEALTH EMERGENCY [{device_id}]\n\n⚠️ ALERT: {title}\n👉 ACTION: {advice}"
@@ -462,9 +494,10 @@ def dispatch_emergency_sms_alert(device_id: str, title: str, advice: str):
             import requests
             tg_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
             tg_html_text = (
-                f"🚨 <b>ATHENA HEALTH EMERGENCY [{clean_device_id}]</b>\n\n"
-                f"⚠️ <b>ALERT:</b> {clean_title}\n"
-                f"👉 <b>ACTION:</b> {clean_advice}\n\n"
+                f"🚨 <b>ATHENA HEALTH EMERGENCY</b>\n"
+                f"📱 <b>Device ID:</b> {clean_device_id}\n\n"
+                f"⚠️ <b>ALERT SUMMARY:</b>\n{clean_title}\n\n"
+                f"📋 <b>RECOMMENDED ACTIONS:</b>\n{formatted_actions}\n\n"
                 f"⏰ <b>TIMESTAMP:</b> {now_str}"
             )
             tg_payload = {
