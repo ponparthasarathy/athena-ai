@@ -570,6 +570,9 @@ def check_and_trigger_ai(device_id: str, telemetry: Dict[str, Any]):
     hi = float(telemetry.get("heat_index_c", 25.0))
     hr = float(telemetry.get("heart_rate", 72))
     still_min = float(telemetry.get("last_movement_min", 0.0))
+    pressure = float(telemetry.get("pressure_hpa", 1013.2))
+    humidity = float(telemetry.get("ambient_humidity", 54.0))
+    risk_level = int(telemetry.get("risk_level", 0))
     heat_cls = telemetry.get("tinyml_heat_class", "HEAT_NORMAL")
 
     # Anomaly conditions
@@ -577,8 +580,19 @@ def check_and_trigger_ai(device_id: str, telemetry: Dict[str, Any]):
     is_hypoxia_anomaly = (0 < spo2 < 92)
     is_heat_strain_anomaly = (hi >= 38.0 or heat_cls in ["HEAT_EMERGENCY", "HEAT_WARNING"] or hr > 115)
     is_resting_tachycardia = (hr > 120 and still_min > 2.0)
+    is_flood_anomaly = (0 < pressure < 1005.0 and humidity > 88.0)
+    is_smog_anomaly = (pressure > 1020.0 and humidity > 85.0)
+    is_explicit_risk_alert = (risk_level >= 2 or telemetry.get("is_emergency", False))
 
-    is_emergency = is_fall_anomaly or is_hypoxia_anomaly or is_heat_strain_anomaly or is_resting_tachycardia
+    is_emergency = (
+        is_fall_anomaly 
+        or is_hypoxia_anomaly 
+        or is_heat_strain_anomaly 
+        or is_resting_tachycardia 
+        or is_flood_anomaly 
+        or is_smog_anomaly 
+        or is_explicit_risk_alert
+    )
 
     reason = None
     if is_fall_anomaly:
@@ -589,6 +603,12 @@ def check_and_trigger_ai(device_id: str, telemetry: Dict[str, Any]):
         reason = f"ALERT_HEAT_STRAIN_HI_{hi:.1f}C_HR_{int(hr)}BPM"
     elif is_resting_tachycardia:
         reason = f"ALERT_RESTING_TACHYCARDIA_{int(hr)}BPM"
+    elif is_flood_anomaly:
+        reason = f"ALERT_FLOOD_INUNDATION_PRESSURE_{pressure:.1f}hPa"
+    elif is_smog_anomaly:
+        reason = f"ALERT_POLLUTION_SMOG_INVERSION_PRESSURE_{pressure:.1f}hPa"
+    elif is_explicit_risk_alert:
+        reason = f"ALERT_ELEVATED_RISK_LEVEL_{risk_level}"
     elif (now - dev.last_ai_routine_time) >= AI_ROUTINE_INTERVAL_SEC:
         reason = "ROUTINE_HEALTH_AUDIT"
 
