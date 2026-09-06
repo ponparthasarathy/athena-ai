@@ -63,10 +63,10 @@
       // 1. Scene Setup
       this.scene = new THREE.Scene();
 
-      // 2. Camera Setup (Centered front-facing view)
-      this.camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
-      this.camera.position.set(0, 0.95, 2.6);
-      this.camera.lookAt(0, 0.7, 0);
+      // 2. Camera Setup (Centered front-facing view with full head-to-toe clearance)
+      this.camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
+      this.camera.position.set(0, 0.75, 2.7);
+      this.camera.lookAt(0, 0.70, 0);
 
       // 3. WebGL Renderer
       this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -115,16 +115,16 @@
         loader.load(
           item.url,
           (fbx) => {
-            // Scale and center model
-            fbx.scale.set(0.0085, 0.0085, 0.0085);
+            // Scale and center model with full head-to-toe headroom
+            fbx.scale.set(0.0075, 0.0075, 0.0075);
             
-            // Align vertical position offsets so all models stay in the exact same center spot
-            if (key === 'idle' || key === 'breathing') {
-              fbx.position.set(0, 0.2, 0); // Center sitting / breathing model height
+            // Align vertical position offsets for standing vs sitting vs fall poses
+            if (key === 'idle') {
+              fbx.position.set(0, 0.25, 0); // Sitting pose vertical offset
             } else if (key === 'fallen') {
-              fbx.position.set(0, 0.1, 0);
+              fbx.position.set(0, 0.05, 0);
             } else {
-              fbx.position.set(0, 0, 0);
+              fbx.position.set(0, -0.05, 0); // Standing poses (breathing, walking, running)
             }
 
 
