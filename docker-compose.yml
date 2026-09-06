@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # Athena Cloud Backend & Web Dashboard
+  athena-server:
+    build: .
+    container_name: athena-cloud-server
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=gemini-2.5-flash
+      - MQTT_BROKER_HOST=${MQTT_BROKER_HOST:-mosquitto}
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT:-1883}
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+      - MQTT_TOPIC_TELEMETRY=${MQTT_TOPIC_TELEMETRY:-athena/device/+/telemetry}
+      - MQTT_TOPIC_STATUS=${MQTT_TOPIC_STATUS:-athena/device/+/status}
+      - AI_ROUTINE_INTERVAL_SEC=300
+      - AI_ANOMALY_COOLDOWN_SEC=45
+    depends_on:
+      - mosquitto
+
+  # Local MQTT Broker (Eclipse Mosquitto)
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: athena-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    command: mosquitto -c /mosquitto-no-auth.conf

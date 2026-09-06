@@ -1,0 +1,163 @@
+# Athena — Intelligent IoT Health Monitoring Ecosystem
+
+![Athena Health Ecosystem](https://img.shields.io/badge/Architecture-Hybrid%20Edge--Cloud-06B6D4?style=for-the-badge)
+![Firmware](https://img.shields.io/badge/ESP32-FreeRTOS%20C%2B%2B-10B981?style=for-the-badge&logo=espressif)
+![Cloud Backend](https://img.shields.io/badge/Backend-FastAPI%20%7C%20MQTT-F59E0B?style=for-the-badge&logo=fastapi)
+![AI Engine](https://img.shields.io/badge/AI-Google%20Gemini%202.5-8B5CF6?style=for-the-badge&logo=google)
+
+**Athena** is an end-to-end, production-grade IoT healthcare ecosystem designed for 24/7 autonomous health and safety monitoring. It implements a **Hybrid Edge-Cloud Architecture**:
+1. **Low-Latency Edge Computing (ESP32)**: Mission-critical safety algorithms (50 Hz IMU fall detection, optical PPG pulse oximetry, and environmental Heat Index calculation) run on-device.
+2. **Contextual Cloud AI (Google Gemini 2.5)**: Synthesizes long-term trends, vital anomalies, and multi-sensor environmental strain to provide empathetic, structured clinical recommendations.
+3. **Global Real-Time Dashboard**: Streams sub-second telemetry via WebSockets to a web dashboard with real-time Canvas charts and emergency alarms.
+
+---
+
+## ??? System Architecture
+
+```
+                                  ATHENA ARCHITECTURE
+
+ [ MAX30102 PPG ] --+
+ [ BME280 Climate] --+--? [ ESP32 Dev Module (WROOM-32) ]
+ [ MPU6050 IMU   ] --¦     +- 50Hz Fall Detection (|a| > 2.6g + stillness)
+ [ SSD1306 OLED  ] --+     +- Fail-Safe I2C Bus Recovery Watchdog
+                           +- Wi-Fi STA (11dBm brownout mitigation)
+                           +- Non-blocking FreeRTOS timers
+                                         ¦
+                                         ? (MQTT over TLS port 8883 — 5s routine / 0s emergency)
+                              [ HiveMQ Cloud MQTT Broker ]
+                               (Secure, globally accessible)
+                                         ¦
+                                         ?
+                           [ FastAPI Ingestion Backend ]
+                             +- In-Memory Rolling Trend Buffer
+                             +- Sub-Second WebSocket Broadcaster
+                             +- Anomaly & Rate-Limited Trigger Dispatcher
+                             +-----------------------+
+                                         ¦
+                   +-------------------------------------------+
+                   ?                                           ?
+       [ Google Gemini AI Engine ]               [ Live Web Dashboard ]
+        +- Multi-Sensor Context Prompting         +- Real-time Canvas Sparklines
+        +- Structured JSON Clinical Schema        +- Dynamic Dr. Athena AI Advice Card
+        +- Empathetic "Dr. Athena" Rationale      +- Alert Log & Environmental Risk Grid
+```
+
+---
+
+## ?? Project Structure
+
+```
+athena-ai/
++-- docs/
+¦   +-- hardware_wiring.md       # Pin-to-pin wiring map, I2C addresses & schematics
+¦   +-- deployment_guide.md      # Step-by-step flashing, broker, and cloud guide
++-- firmware/
+¦   +-- sahaay_firmware/
+¦       +-- sahaay_firmware.ino  # Production ESP32 C++ firmware
++-- backend/
+¦   +-- server.py                # FastAPI server, MQTT client, WebSocket, Gemini AI
+¦   +-- simulator.py             # Interactive CLI & automated telemetry simulator
+¦   +-- requirements.txt         # Python dependencies
+¦   +-- .env                     # Environment variables (not committed — see .env.example)
+¦   +-- .env.example             # Environment template
++-- frontend/
+¦   +-- index.html               # Self-contained Single-Page Web Dashboard
++-- Dockerfile                   # Cloud containerization definition
++-- docker-compose.yml           # Unified backend + Mosquitto broker compose
++-- README.md                    # Ecosystem documentation
+```
+
+---
+
+## ? Quick Start
+
+### 1. Configure Environment
+```bash
+cd backend
+cp .env.example .env
+# Edit .env — add your Gemini API key and HiveMQ Cloud credentials
+```
+
+### 2. Start the Backend Server
+```bash
+pip install -r requirements.txt
+python server.py
+```
+Open **`http://localhost:8000/`** in your browser to view the live dashboard.
+
+### 3. Run the Telemetry Simulator (optional)
+```bash
+python simulator.py
+```
+Select scenarios (Fall Impact, Hypoxia, Heat Stress) to observe instant AI diagnosis without an ESP32.
+
+### 4. Flash the ESP32
+1. Open `firmware/sahaay_firmware/sahaay_firmware.ino` in **Arduino IDE**.
+2. Set your Wi-Fi SSID/Password and HiveMQ Cloud cluster URL + credentials.
+3. Wire the sensors per the [Hardware Wiring Guide](docs/hardware_wiring.md).
+4. Select **Board: ESP32 Dev Module**, correct **COM port**, then click **Upload**.
+5. Open **Serial Monitor @ 115200 baud** to verify connection.
+
+---
+
+## ?? Cloud Deployment
+
+### MQTT Broker — HiveMQ Cloud (free)
+1. Sign up at [hivemq.com/cloud](https://www.hivemq.com/cloud/) ? create a free Serverless cluster
+2. Add credentials under **Access Management** (e.g. user: `athena`, topic permission: `#`)
+3. Update `MQTT_BROKER_HOST` in your `.env` and firmware with your cluster URL
+
+### Server — Render.com (free)
+1. Push this repo to GitHub
+2. New Web Service on [render.com](https://render.com) ? connect repo
+3. Build: `pip install -r backend/requirements.txt`
+4. Start: `cd backend && python server.py`
+5. Add all env vars from `.env.example` in Render's dashboard
+
+---
+
+## ?? Gemini AI Medical JSON Schema
+
+Every routine audit (5 min) and immediate anomaly trigger (Fall, SpO2 < 92%, Heat Index > 38°C) prompts Gemini with aggregated physiological context and enforces a strict structured JSON response:
+
+```json
+{
+  "risk_level": "NORMAL | WATCH | ALERT | EMERGENCY",
+  "summary": "Concise overview of patient status and environmental context",
+  "actionable_advice": "Immediate, practical recommendations for patient or caregiver",
+  "clinical_assessment": "Pathophysiological rationale explaining underlying vital dynamics",
+  "vital_flags": ["TACHYCARDIA", "HYPOXIA", "HEAT_STRESS", "IMPACT_FALL"]
+}
+```
+
+---
+
+## ?? Required Arduino Libraries
+
+Install via **Arduino IDE ? Tools ? Manage Libraries**:
+
+| Library | Author |
+|---|---|
+| PubSubClient | Nick O'Leary |
+| ArduinoJson | Benoit Blanchon |
+| Adafruit SSD1306 | Adafruit |
+| Adafruit GFX Library | Adafruit |
+| Adafruit BME280 Library | Adafruit |
+| Adafruit Unified Sensor | Adafruit |
+| MPU6050 | Electronic Cats |
+| SparkFun MAX3010x | SparkFun |
+
+---
+
+## ??? Security Notes
+
+- **Never commit your `.env` file** — it is in `.gitignore` by default
+- **Rotate your Gemini API key** if it was ever exposed in a commit
+- Use **HiveMQ Cloud TLS (port 8883)** — all sensor data is encrypted in transit
+- Add **environment variables directly in Render's dashboard** — not in source code
+
+---
+
+## ?? License
+MIT License. Built for the advancement of connected health and remote patient safety.

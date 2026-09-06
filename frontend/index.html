@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Athena - Health Companion Dashboard</title>
+<meta name="description" content="Athena intelligent IoT health monitoring dashboard - real-time vitals, fall detection and environmental risk.">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1F6F63">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg: #EEF2EF; --panel: #F7F9F7; --ink: #17322B; --ink-soft: #4C635B; --line: #CBD6CE; --teal: #1F6F63; --teal-soft: #DCEAE5; --amber: #C0791F; --amber-soft: #F3E3C7; --red: #AE3B2E; --red-soft: #F3DAD5; }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ background: var(--bg); color: var(--ink); font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; padding: 28px; }
+  .display{ font-family: 'Fraunces', serif; }
+  .frame{ max-width: 1180px; margin: 0 auto; }
+  header{ display:flex; justify-content:space-between; align-items:flex-end; padding-bottom: 18px; border-bottom: 1px solid var(--line); margin-bottom: 22px; flex-wrap: wrap; gap: 14px; }
+  header h1{ font-size: 27px; font-weight: 500; margin:0; letter-spacing: -0.01em; }
+  header p{ margin: 4px 0 0; color: var(--ink-soft); font-size: 13.5px; }
+  .device-tag{ text-align:right; font-size: 12.5px; color: var(--ink-soft); line-height:1.5; }
+  .device-tag b{ color: var(--ink); font-weight: 600; }
+  .dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--teal); margin-right:6px; }
+  .grid{ display:grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 18px; }
+  @media (max-width: 880px){ .grid{ grid-template-columns: 1fr; } }
+  .panel{ background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 20px; }
+  .panel h2{ font-size: 12px; font-weight: 600; color: var(--ink-soft); letter-spacing: 0.05em; margin: 0 0 14px; text-transform: uppercase; }
+  .status-panel{ grid-column: 1 / 2; grid-row: 1 / 3; display:flex; flex-direction:column; }
+  .status-word{ font-size: 44px; margin: 4px 0 6px; }
+  .status-word.normal{ color: var(--teal); }
+  .status-word.watch{ color: var(--amber); }
+  .status-word.alert, .status-word.emergency{ color: var(--red); }
+  .status-sub{ color: var(--ink-soft); font-size: 13.5px; margin-bottom: 20px; }
+  .vital-row{ display:flex; justify-content:space-between; padding: 11px 0; border-top: 1px solid var(--line); }
+  .vital-label{ color: var(--ink-soft); font-size: 13px; }
+  .vital-value{ font-size: 15px; font-weight: 600; }
+  .chart-panel canvas{ width: 100%; height: 90px; display:block; }
+  .chart-panel .reading{ font-family:'Fraunces', serif; font-size: 30px; margin: 2px 0 8px; }
+  .chart-panel .unit{ font-size: 13px; color: var(--ink-soft); font-weight: 400; }
+  .chart-panel .range{ font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+  .env-panel{ grid-column: 2 / 4; }
+  .env-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 600px){ .env-grid{ grid-template-columns: repeat(2, 1fr); } }
+  .env-cell{ border: 1px solid var(--line); border-radius: 4px; padding: 14px; }
+  .env-cell .k{ font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; }
+  .env-cell .v{ font-family: 'Fraunces', serif; font-size: 22px; }
+  .env-cell .tag{ display:inline-block; margin-top: 8px; font-size: 11.5px; padding: 3px 8px; border-radius: 2px; }
+  .tag.ok{ background: var(--teal-soft); color: var(--teal); }
+  .tag.watch{ background: var(--amber-soft); color: var(--amber); }
+  .tag.bad{ background: var(--red-soft); color: var(--red); }
+  .timeline-panel{ grid-column: 2 / 4; }
+  .tl-item{ display:flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .tl-item:first-child{ border-top: none; }
+  .tl-time{ color: var(--ink-soft); min-width: 58px; }
+  .tl-dot{ width:7px; height:7px; border-radius:50%; margin-top: 5px; flex-shrink:0; }
+  .tl-dot.ok{ background: var(--teal); }
+  .tl-dot.watch{ background: var(--amber); }
+  .tl-dot.bad{ background: var(--red); }
+  .tl-text b{ font-weight: 600; }
+  .tl-text span{ color: var(--ink-soft); }
+  footer{ margin-top: 22px; font-size: 12px; color: var(--ink-soft); text-align:center; }
+  .demo-banner{ max-width:1180px; margin: 0 auto 16px; padding: 10px 16px; background: var(--amber-soft); color: var(--amber); border-radius: 4px; font-size: 12.5px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .demo-banner button{ font-size: 11.5px; padding: 4px 10px; border: 1px solid var(--amber); background: transparent; color: var(--amber); border-radius: 2px; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .demo-banner button:hover{ background: var(--amber); color: #fff; }
+  .ai-panel{ grid-column: 2 / 4; border-left: 3px solid var(--teal); }
+  .ai-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; }
+  .ai-body{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 880px){ .ai-body{ grid-template-columns: 1fr; } }
+  .ai-section-label{ font-size: 11px; font-weight: 600; color: var(--ink-soft); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-section p{ font-size: 13.5px; line-height: 1.6; margin: 0; color: var(--ink); }
+  .ai-flags{ display:flex; flex-wrap:wrap; gap: 6px; margin-top: 12px; }
+  .ai-flag{ font-size: 11px; padding: 3px 8px; border-radius: 2px; background: var(--red-soft); color: var(--red); font-weight: 600; }
+  .ai-flag.normal{ background: var(--teal-soft); color: var(--teal); }
+  .ai-loading{ color: var(--ink-soft); font-size: 13px; font-style: italic; }
+  .ai-trigger-btn{ font-size: 11.5px; padding: 4px 10px; border: 1px solid var(--teal); background: transparent; color: var(--teal); border-radius: 2px; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .ai-trigger-btn:hover{ background: var(--teal); color: #fff; }
+  .avatar-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; }
+  .avatar-badge{ display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; letter-spacing:0.04em; background:var(--teal-soft); color:var(--teal); border:1px solid rgba(31,111,99,0.25); }
+  .avatar-badge.active{ background:rgba(31,111,99,0.18); color:var(--teal); }
+  .avatar-badge.fallen{ background:var(--red-soft); color:var(--red); border-color:var(--red); animation: pulseRed 1s infinite alternate; }
+  /* Toast Notification Container */
+  #toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 380px;
+    pointer-events: none;
+  }
+  .toast-banner {
+    pointer-events: auto;
+    background: #ffffff;
+    border-left: 4px solid var(--amber);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    border-radius: 6px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    font-size: 13px;
+  }
+  .toast-banner.danger {
+    border-left-color: var(--red);
+    background: #FFF5F5;
+  }
+  .toast-banner.warning {
+    border-left-color: var(--amber);
+    background: #FFFBF0;
+  }
+  .toast-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+  }
+  .toast-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .toast-close {
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-size: 16px;
+    border: none;
+    background: none;
+    padding: 0;
+  }
+  .toast-body {
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+</style>
+
+</head>
+<body>
+<div id="toast-container"></div>
+<div class="demo-banner" id="demo-banner">
+  <span id="demo-banner-text">⚠️ ESP32 Hardware Offline. Displaying simulated telemetry for testing &amp; demo.</span>
+  <span style="display:flex; gap:6px; flex-wrap:wrap;">
+    <button onclick="triggerEvent('idle')">Idle Stance</button>
+    <button onclick="triggerEvent('walk')">Simulate Walk</button>
+    <button onclick="triggerEvent('run')">Simulate Run</button>
+    <button onclick="triggerEvent('fall')">Simulate Fall</button>
+    <button onclick="triggerEvent('heat')">Simulate Heat Spike</button>
+  </span>
+</div>
+<div class="frame">
+  <header>
+    <div>
+      <h1 class="display">Athena <span style="color:var(--ink-soft); font-weight:400;">- Health Companion</span></h1>
+      <p>On-device early warning &middot; environment, motion &amp; vitals processed locally</p>
+    </div>
+    <div class="device-tag">
+      <div><span class="dot" id="conn-dot"></span><b id="device-label">PHC-0001</b></div>
+      <div id="last-sync">connecting...</div>
+      <div style="margin-top:6px; display:flex; gap:4px; align-items:center; justify-content:flex-end;">
+        <input id="ws-url-input" type="text" placeholder="ws://192.168.4.1/ws" style="font-size:11.5px; padding:3px 6px; border:1px solid var(--line); border-radius:2px; width:130px; font-family:'Inter',sans-serif;">
+        <button onclick="setDeviceUrl()" style="font-size:11.5px; padding:3px 8px; border:1px solid var(--line); border-radius:2px; background:var(--panel); cursor:pointer; font-family:'Inter',sans-serif;">Connect</button>
+        <button id="btn-request-notif" onclick="requestNotificationPermission()" style="font-size:11.5px; padding:3px 8px; border:1px solid var(--teal); background:var(--teal-soft); color:var(--teal); border-radius:2px; cursor:pointer; font-family:'Inter',sans-serif; font-weight:600;">🔔 Push Alerts</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="panel status-panel">
+      <h2>Current Risk</h2>
+      <div class="status-word display normal" id="risk-word">Normal</div>
+      <div class="status-sub" id="risk-sub">All readings within expected range</div>
+      <div class="vital-row"><span class="vital-label">Heart Rate</span><span class="vital-value" id="v-bpm">- bpm</span></div>
+      <div class="vital-row"><span class="vital-label">Blood Oxygen (SpO2)</span><span class="vital-value" id="v-spo2">- %</span></div>
+      <div class="vital-row"><span class="vital-label">Ambient Temperature</span><span class="vital-value" id="v-temp">- C</span></div>
+      <div class="vital-row"><span class="vital-label">Humidity</span><span class="vital-value" id="v-hum">- %</span></div>
+      <div class="vital-row"><span class="vital-label">Barometric Pressure</span><span class="vital-value" id="v-pres">- hPa</span></div>
+      <div class="vital-row"><span class="vital-label">Movement State</span><span class="vital-value" id="v-move">-</span></div>
+      <div class="vital-row"><span class="vital-label">Last Movement</span><span class="vital-value" id="v-lastmove">-</span></div>
+      <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--line);">
+        <div class="avatar-header" style="margin-bottom:8px;">
+          <h2 style="margin:0;">3D Motion Telemetry</h2>
+          <span class="avatar-badge" id="avatar-state-badge">🟢 IDLE &middot; NOMINAL</span>
+        </div>
+        <div class="avatar-container" id="avatar-container"></div>
+        <div style="font-size:11.5px; color:var(--ink-soft); text-align:center; margin-top:2px;">
+          Real-time 3D motion telemetry scan
+        </div>
+      </div>
+    </div>
+    <div class="panel ai-panel">
+      <div class="ai-header">
+        <h2 style="margin:0;">Dr. Athena - AI Advisory</h2>
+        <button class="ai-trigger-btn" id="ai-trigger-btn" onclick="requestAIEvaluation()">Request Evaluation</button>
+      </div>
+      <div id="ai-content">
+        <p class="ai-loading">Waiting for first AI evaluation. Gemini analyses vitals every 5 minutes, or immediately on anomaly detection.</p>
+      </div>
+    </div>
+    <div class="panel chart-panel">
+      <h2>Heat Index</h2>
+      <div class="reading display" id="heat-big">- <span class="unit">C</span></div>
+      <canvas id="temp-chart"></canvas>
+      <div class="range">Computed from ambient temp + humidity</div>
+    </div>
+    <div class="panel chart-panel">
+      <h2>Barometric Pressure</h2>
+      <div class="reading display" id="pres-big">- <span class="unit">hPa</span></div>
+      <canvas id="pres-chart"></canvas>
+      <div class="range" id="pres-trend-note">A sustained drop can signal an incoming storm</div>
+    </div>
+    <div class="panel env-panel">
+      <h2>Vitals &amp; Environmental Risk</h2>
+      <div class="env-grid">
+        <div class="env-cell"><div class="k">Heart Rate</div><div class="v" id="env-bpm">-</div><span class="tag ok" id="env-bpm-tag">Normal</span></div>
+        <div class="env-cell"><div class="k">Oxygen (SpO2)</div><div class="v" id="env-spo2">-</div><span class="tag ok" id="env-spo2-tag">Normal</span></div>
+        <div class="env-cell"><div class="k">Heat Stress</div><div class="v" id="env-heat">-</div><span class="tag ok" id="env-heat-tag">Normal</span></div>
+        <div class="env-cell"><div class="k">Fall / Motion</div><div class="v" id="env-fall">-</div><span class="tag ok" id="env-fall-tag">Normal</span></div>
+      </div>
+    </div>
+    <div class="panel timeline-panel">
+      <h2>Alert Log</h2>
+      <div id="timeline"><div style="font-size:13px; color:var(--ink-soft); font-style:italic;">No alerts yet - system nominal.</div></div>
+    </div>
+  </div>
+  <footer>Live telemetry over WebSocket &middot; AI advisory by Google Gemini 2.5 &middot; Athena 2026</footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+<script src="avatar.js"></script>
+<script>
+let DEVICE_WS_URL="",socket=null,usingLiveData=false,lastRiskLevel=0,simTimer=null,simConnectTimeout=null;
+const state={temp:[],pressure:[]};
+const sim={temp:29.5,hum:55,pres:1011,hr:74,spo2:97,finger:true,moving:false,lastMoveMin:2,fall:false,fallUntil:0,heatUntil:0,mode:'idle'};
+function computeHI(tC,rh){const tF=tC*9/5+32;const hiF=-42.379+2.04901523*tF+10.14333127*rh-0.22475541*tF*rh-0.00683783*tF*tF-0.05481717*rh*rh+0.00122874*tF*tF*rh+0.00085282*tF*rh*rh-0.00000199*tF*tF*rh*rh;return(hiF-32)*5/9;}
+function jitter(v,a){return v+(Math.random()-0.5)*a;}
+
+function triggerEvent(type){
+  if(type==='fall'){
+    sim.fall=true;
+    sim.fallUntil=Date.now()+30000;
+    sim.moving=false;
+    sim.lastMoveMin=0;
+    sim.mode='fall';
+  }
+  else if(type==='walk'){
+    sim.fall=false;
+    sim.moving=true;
+    sim.lastMoveMin=0;
+    sim.mode='walk';
+  }
+  else if(type==='run'){
+    sim.fall=false;
+    sim.moving=true;
+    sim.lastMoveMin=0;
+    sim.hr=132;
+    sim.mode='run';
+  }
+  else if(type==='idle'){
+    sim.fall=false;
+    sim.moving=false;
+    sim.lastMoveMin=1;
+    sim.temp=29.5;
+    sim.hum=55;
+    sim.hr=74;
+    sim.mode='idle';
+  }
+  else if(type==='heat'){
+    sim.fall=false;
+    sim.temp=42.5;
+    sim.hum=78;
+    sim.hr=122;
+    sim.heatUntil=Date.now()+45000;
+    sim.mode='heat';
+  }
+
+  const reading = nextSimReading();
+  renderLiveReading(reading);
+  sendSimulatedTelemetry(reading);
+  requestAIEvaluation();
+}
+
+function sendSimulatedTelemetry(d){
+  if(socket && socket.readyState === WebSocket.OPEN){
+    socket.send(JSON.stringify({ action: 'TELEMETRY', type: 'SIMULATED_TELEMETRY', device_id: 'PHC-0001', telemetry: d }));
+  }
+}
+
+function nextSimReading(){
+  if (sim.mode === 'heat' && Date.now() < sim.heatUntil) {
+    sim.temp = jitter(42.5, 0.4);
+    sim.hum = Math.min(95, Math.max(50, jitter(78, 1.0)));
+    sim.hr = Math.max(105, Math.min(140, jitter(122, 3)));
+  } else {
+    sim.temp = jitter(sim.temp > 35 ? sim.temp * 0.97 + 29.5 * 0.03 : sim.temp, 0.3);
+    sim.hum = Math.min(95, Math.max(30, jitter(sim.hum, 1.2)));
+  }
+
+  sim.pres = jitter(sim.pres, 0.15);
+  if (sim.mode === 'walk' || sim.mode === 'run') { sim.moving = true; sim.lastMoveMin = 0; }
+  else if (sim.mode === 'idle') { sim.moving = false; sim.lastMoveMin += 0.02; }
+  else if (!sim.mode || sim.mode === 'auto') { sim.moving = Math.random() < 0.25; sim.lastMoveMin = sim.moving ? 0 : sim.lastMoveMin + (1/60); }
+
+  if (sim.fall && Date.now() > sim.fallUntil) { sim.fall = false; sim.mode = 'idle'; }
+  if (sim.mode === 'heat' && Date.now() > sim.heatUntil) { sim.mode = 'idle'; }
+
+  sim.finger = Math.random() > 0.08;
+  if (sim.finger) {
+    sim.hr = Math.max(48, Math.min(150, jitter((sim.mode==='run'||sim.mode==='heat') ? 124 : sim.hr, 3)));
+    sim.spo2 = Math.max(88, Math.min(99, Math.round(jitter(sim.spo2, 0.6))));
+  }
+  const heat = computeHI(sim.temp, sim.hum);
+  let risk = 0;
+  if (sim.fall || heat > 40.0) risk = 3;
+  else if (heat > 37.0 || sim.hr > 115 || (sim.hr > 0 && sim.hr < 45)) risk = 2;
+
+  return {
+    ambient_temp_c: sim.temp,
+    ambient_humidity: sim.hum,
+    pressure_hpa: sim.pres,
+    heat_index_c: heat,
+    heart_rate: Math.round(sim.hr),
+    spo2: sim.spo2,
+    finger_detected: sim.finger,
+    is_moving: sim.moving,
+    motion_type: sim.mode,
+    last_movement_min: sim.lastMoveMin,
+    fall_detected: sim.fall,
+    risk_level: risk
+  };
+}
+function startSimulation(){stopSimulation();document.getElementById('demo-banner').style.display='flex';setConnBadge('demo_sim');simTimer=setInterval(()=>renderLiveReading(nextSimReading()),1000);renderLiveReading(nextSimReading());}
+function stopSimulation(){if(simTimer)clearInterval(simTimer);simTimer=null;}
+function connectWebSocket(){
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = DEVICE_WS_URL || `${proto}//${location.host}/ws`;
+  try{socket=new WebSocket(url);}catch(e){console.error('WS create error:',e);scheduleReconnect();return;}
+  clearTimeout(simConnectTimeout);
+  simConnectTimeout=setTimeout(()=>{if(!usingLiveData)startSimulation();},3000);
+  socket.onopen=()=>{
+    setConnBadge('demo_sim');
+    console.log('[ATHENA WS] Connected to backend server at', url);
+  };
+  socket.onclose=()=>{
+    usingLiveData=false;
+    setConnBadge('offline');
+    console.warn('[ATHENA WS] Disconnected, scheduling reconnect...');
+    scheduleReconnect();
+  };
+  socket.onerror=(err)=>{console.error('[ATHENA WS] Error:', err); socket.close();};
+  socket.onmessage=(evt)=>{
+    try{
+      const msg=JSON.parse(evt.data);
+      const tel = msg.telemetry || msg.data || (msg.ambient_temp_c !== undefined ? msg : null);
+      
+      const isRealHardware = Boolean(msg.is_hardware || (tel && tel.is_hardware));
+      if (isRealHardware) {
+        usingLiveData = true;
+        stopSimulation();
+        setConnBadge('hardware_live');
+      }
+
+      if ((msg.type === 'TELEMETRY' || msg.type === 'TELEMETRY_UPDATE') && tel) {
+        renderLiveReading(tel);
+      }
+      else if(msg.type==='AI_ADVISORY'&&msg.advisory) {
+        renderAIAdvisory(msg.advisory);
+      }
+      else if(msg.type==='INITIAL_STATE'&&msg.devices&&msg.devices.length>0){
+        const dev=msg.devices[0];
+        const devTel = dev.latest_telemetry || dev.telemetry;
+        if(devTel) renderLiveReading(devTel);
+        if(dev.advisory || dev.latest_advisory) renderAIAdvisory(dev.advisory || dev.latest_advisory);
+        document.getElementById('device-label').textContent=dev.device_id||'PHC-0001';
+      }
+      else if(tel) {
+        renderLiveReading(tel);
+      }
+    }catch(e){console.error('Bad payload',e);}
+  };
+}
+function scheduleReconnect(){setTimeout(()=>{if(!usingLiveData)connectWebSocket();},3000);}
+function setDeviceUrl(){const val=document.getElementById('ws-url-input').value.trim();if(!val)return;DEVICE_WS_URL=val;if(socket)socket.close();stopSimulation();connectWebSocket();}
+function setConnBadge(mode){
+  const dot=document.getElementById('conn-dot');
+  const tag=document.getElementById('last-sync');
+  const bannerText=document.getElementById('demo-banner-text');
+  if(mode==='hardware_live'){
+    dot.style.background='var(--teal)';
+    tag.textContent='live - ESP32 hardware online';
+    if(bannerText) bannerText.textContent='🟢 Connected to ESP32 Hardware (PHC-0001). Receiving live MQTT telemetry.';
+  }else if(mode==='demo_sim'){
+    dot.style.background='var(--amber)';
+    tag.textContent='demo mode - simulated data (ESP32 offline)';
+    if(bannerText) bannerText.textContent='⚠️ ESP32 Hardware Offline. Displaying simulated telemetry for testing & demo.';
+  }else{
+    dot.style.background='var(--red)';
+    tag.textContent='offline - server disconnected';
+    if(bannerText) bannerText.textContent='🔴 Server Disconnected. Attempting WebSocket reconnect...';
+  }
+}
+function requestAIEvaluation(){
+  const btn=document.getElementById('ai-trigger-btn');
+  if(btn){ btn.textContent='Requesting...'; btn.disabled=true; }
+  const currentReading = nextSimReading();
+
+  if(socket && socket.readyState === WebSocket.OPEN){
+    socket.send(JSON.stringify({ action: 'TRIGGER_EVALUATION', device_id: 'PHC-0001', telemetry: currentReading }));
+    setTimeout(() => { if(btn){ btn.textContent='Request Evaluation'; btn.disabled=false; } }, 2500);
+  } else {
+    // Local offline evaluation fallback
+    const tel = currentReading;
+    const heatC = num(tel.heat_index_c, 25);
+    const tempC = num(tel.ambient_temp_c, 26.5);
+    const hum = num(tel.ambient_humidity, 52);
+    const hr = num(tel.heart_rate, 74);
+    const fall = tel.fall_detected;
+
+    let rLevel = 'NORMAL';
+    let summary = `Ambient temp ${tempC.toFixed(1)}°C, humidity ${hum.toFixed(0)}%, Heat Index ${heatC.toFixed(1)}°C. Vitals within normal limits.`;
+    let advice = 'Maintain regular activities and stay hydrated with water or ORS/nimbu pani.';
+    let clinical = 'Ambient temperature (BME280) reflects atmospheric environment, not core body temp. Baseline balance observed.';
+    let flags = [];
+
+    if(fall){
+      rLevel = 'EMERGENCY';
+      flags = ['HIGH_G_FALL_IMPACT', 'PROLONGED_STILLNESS'];
+      summary = 'CRITICAL: High-impact fall detected with confirmed post-impact stillness.';
+      advice = 'Immediate caregiver checkup required. Verify responsiveness and airway.';
+      clinical = 'Kinetic impact anomaly. Potential heat stroke collapse or traumatic injury.';
+    } else if(heatC > 39.0 || sim.mode === 'heat'){
+      rLevel = 'EMERGENCY';
+      flags = ['IMD_HEATWAVE_HAZARD', 'HEAT_STRESS_TACHYCARDIA'];
+      summary = `CRITICAL: Extreme Heat Index of ${heatC.toFixed(1)}°C (Ambient Temp: ${tempC.toFixed(1)}°C, RH: ${hum.toFixed(0)}%).`;
+      advice = 'Move patient to shade/indoors immediately, apply cool wet towels, offer cold ORS/electrolyte fluids. Avoid sun exposure between 12 PM - 4 PM.';
+      clinical = 'IMD Severe Heatwave criteria met. High risk of Exertional Heat Stroke due to evaporative cooling breakdown.';
+    } else if(heatC > 37.0 || hr > 100){
+      rLevel = 'ALERT';
+      flags = ['HEAT_STRESS_TACHYCARDIA'];
+      summary = `Heat strain detected: Elevated HR (${hr} BPM) under Heat Index of ${heatC.toFixed(1)}°C.`;
+      advice = 'Rest in shade, unbutton tight clothing, drink 500ml electrolyte water.';
+      clinical = 'Thermoregulatory cardiovascular strain: Cutaneous vasodilation compensating for thermal load.';
+    }
+
+    renderAIAdvisory({
+      risk_level: rLevel,
+      summary: summary,
+      actionable_advice: advice,
+      clinical_assessment: clinical,
+      vital_flags: flags,
+      generated_at: new Date().toISOString(),
+      trigger_reason: sim.mode === 'heat' ? 'ALERT_HEAT_SPIKE' : 'WEB_CLIENT_DEMAND',
+      is_ai_generated: false
+    });
+    setTimeout(() => { if(btn){ btn.textContent='Request Evaluation'; btn.disabled=false; } }, 800);
+  }
+}
+function pushCapped(arr,val,cap=40){arr.push(val);if(arr.length>cap)arr.shift();}
+function drawSpark(canvas,data,color){
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width=canvas.clientWidth*devicePixelRatio;
+  const h=canvas.height=canvas.clientHeight*devicePixelRatio;
+  ctx.clearRect(0,0,w,h);if(data.length<2)return;
+  const min=Math.min(...data),max=Math.max(...data);const pad=6*devicePixelRatio;
+  ctx.beginPath();
+  data.forEach((v,i)=>{const x=pad+(i/(data.length-1))*(w-2*pad);const y=h-pad-((v-min)/((max-min)||1))*(h-2*pad);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.strokeStyle=color;ctx.lineWidth=2*devicePixelRatio;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+}
+function tagEl(el,level,text){el.className='tag '+level;el.textContent=text;}
+function addTimeline(level,title,detail){
+  const wrap=document.getElementById('timeline');
+  if(wrap.querySelector('div[style]'))wrap.innerHTML='';
+  const item=document.createElement('div');item.className='tl-item';
+  const time=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  item.innerHTML=`<div class="tl-time">${time}</div><div class="tl-dot ${level}"></div><div class="tl-text"><b>${title}</b><br><span>${detail}</span></div>`;
+  wrap.prepend(item);while(wrap.children.length>6)wrap.removeChild(wrap.lastChild);
+}
+function renderAIAdvisory(advisory){
+  const riskColors={NORMAL:'ok',WATCH:'watch',ALERT:'bad',EMERGENCY:'bad'};
+  const level=riskColors[advisory.risk_level]||'ok';
+  const flags=(advisory.vital_flags||[]).map(f=>`<span class="ai-flag">${f}</span>`).join('')||'<span class="ai-flag normal">No active flags</span>';
+  const genTime=advisory.generated_at?new Date(advisory.generated_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'--';
+  const source=advisory.is_ai_generated?'Google Gemini 2.5':'Clinical Rule Engine';
+  document.getElementById('ai-content').innerHTML=`
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span class="tag ${level}" style="font-weight:600;">${advisory.risk_level}</span>
+      <span style="font-size:12px;color:var(--ink-soft);">Generated ${genTime} &middot; ${source} &middot; Trigger: ${(advisory.trigger_reason||'').replace(/_/g,' ')}</span>
+    </div>
+    <div class="ai-body">
+      <div class="ai-section"><div class="ai-section-label">Summary</div><p>${advisory.summary||'--'}</p></div>
+      <div class="ai-section"><div class="ai-section-label">Actionable Advice</div><p>${advisory.actionable_advice||'--'}</p></div>
+      <div class="ai-section"><div class="ai-section-label">Clinical Assessment</div><p>${advisory.clinical_assessment||'--'}</p></div>
+    </div>
+    <div class="ai-flags">${flags}</div>`;
+  if(advisory.risk_level==='EMERGENCY'||advisory.risk_level==='ALERT')addTimeline('bad','AI: '+advisory.risk_level,(advisory.summary||'').substring(0,80)+'...');
+}
+function num(v, def=0){ const n = parseFloat(v); return isNaN(n) ? def : n; }
+function renderLiveReading(d){
+  if (!d) return;
+  const heatC = num(d.heat_index_c, 0);
+  const presHpa = num(d.pressure_hpa, 0);
+  const tempC = num(d.ambient_temp_c, 0);
+  const hum = num(d.ambient_humidity, 0);
+  const hr = Math.round(num(d.heart_rate, 0));
+  const spo2 = Math.round(num(d.spo2, 0));
+  const lastMove = num(d.last_movement_min, 0);
+  const isMoving = Boolean(d.is_moving);
+  const isFall = Boolean(d.fall_detected);
+  const hf = Boolean(d.finger_detected);
+
+  pushCapped(state.temp, heatC);
+  pushCapped(state.pressure, presHpa);
+
+  document.getElementById('v-bpm').textContent = (hf && hr > 0) ? (hr + ' bpm') : '--';
+  document.getElementById('v-spo2').textContent = (hf && spo2 > 0) ? (spo2 + ' %') : '--';
+  document.getElementById('env-bpm').textContent = (hf && hr > 0) ? (hr + ' bpm') : 'No finger';
+  document.getElementById('env-spo2').textContent = (hf && spo2 > 0) ? (spo2 + ' %') : 'No finger';
+
+  if (!hf) {
+    tagEl(document.getElementById('env-bpm-tag'), 'ok', 'Waiting');
+    tagEl(document.getElementById('env-spo2-tag'), 'ok', 'Waiting');
+  } else {
+    tagEl(document.getElementById('env-bpm-tag'), (hr < 50 || hr > 115) ? 'bad' : 'ok', hr + ' BPM');
+    tagEl(document.getElementById('env-spo2-tag'), (spo2 < 92) ? 'bad' : (spo2 < 95) ? 'watch' : 'ok', spo2 + ' %');
+  }
+
+  document.getElementById('v-temp').textContent = tempC.toFixed(1) + ' C';
+  document.getElementById('v-hum').textContent = Math.round(hum) + ' %';
+  document.getElementById('v-pres').textContent = presHpa.toFixed(1) + ' hPa';
+  document.getElementById('v-move').textContent = isMoving ? 'Active' : 'Still';
+  document.getElementById('v-lastmove').textContent = isMoving ? 'just now' : Math.round(lastMove) + ' min ago';
+  document.getElementById('heat-big').innerHTML = heatC.toFixed(1) + ' <span class="unit">C</span>';
+  document.getElementById('pres-big').innerHTML = presHpa.toFixed(1) + ' <span class="unit">hPa</span>';
+  document.getElementById('env-heat').textContent = heatC.toFixed(1) + 'C';
+  document.getElementById('env-fall').textContent = isFall ? 'Fall detected' : (isMoving ? 'Active' : Math.round(lastMove) + 'm still');
+
+  drawSpark(document.getElementById('temp-chart'), state.temp, '#C0791F');
+  drawSpark(document.getElementById('pres-chart'), state.pressure, '#1F6F63');
+
+  let hl = 'ok';
+  if (heatC > 41) hl = 'bad';
+  else if (heatC > 37) hl = 'watch';
+  tagEl(document.getElementById('env-heat-tag'), hl, hl === 'bad' ? 'Heat Wave' : hl === 'watch' ? 'Heat Watch' : 'Normal');
+
+  let fl = isFall ? 'bad' : (lastMove > 240 ? 'watch' : 'ok');
+  tagEl(document.getElementById('env-fall-tag'), fl, isFall ? 'Possible Fall' : isMoving ? 'Active' : 'Normal');
+
+  const riskWords = ['Normal', 'Watch', 'Alert', 'Emergency'];
+  const riskSubs = ['All readings within expected range', 'A reading is drifting outside typical range', 'Risk pattern detected - check patient', 'Immediate attention needed'];
+  const rl = parseInt(d.risk_level) || 0;
+  const rw = document.getElementById('risk-word');
+  rw.textContent = riskWords[rl] || 'Normal';
+  rw.className = 'status-word display ' + (rl >= 2 ? 'emergency' : rl === 1 ? 'watch' : 'normal');
+  document.getElementById('risk-sub').textContent = isFall ? 'Possible fall detected - check immediately' : (riskSubs[rl] || riskSubs[0]);
+  if (rl >= 1 && rl !== lastRiskLevel) addTimeline(rl >= 2 ? 'bad' : 'watch', riskWords[rl], riskSubs[rl]);
+  lastRiskLevel = rl;
+
+  // --- 3D Character Avatar Calibration & Motion State Evaluation ---
+  let motionState = 'idle';
+  const accel = num(d.accel_magnitude, 1.0);
+
+  if (isFall || d.fall_detected) {
+    // Fall Condition: High-G impact (>2.6g) + post-fall horizontal stillness on ground
+    motionState = 'fallen';
+  } else if (d.motion_type === 'run' || sim.mode === 'run' || (isMoving && accel > 1.42) || (isMoving && hr > 115)) {
+    // Running Condition: Moving faster with high acceleration variation (>1.42g) or high pulse during motion
+    motionState = 'running';
+  } else if (isMoving || sim.mode === 'walk' || (accel > 1.06 && accel <= 1.42)) {
+    // Walking Condition: Moderate gait movement, watch worn on wrist/body (not on ground)
+    motionState = 'walking';
+  } else {
+    // Idle Condition: Resting/sitting upright, stationary (accel approx 1.0g gravity, no fall flag)
+    motionState = 'idle';
+  }
+
+  if (window.AthenaAvatar) {
+    window.AthenaAvatar.setState(motionState);
+  }
+
+  const badge = document.getElementById('avatar-state-badge');
+  if (badge) {
+    if (motionState === 'fallen') {
+      badge.className = 'avatar-badge fallen';
+      badge.innerHTML = '⚠️ FALL DETECTED';
+    } else if (motionState === 'running') {
+      badge.className = 'avatar-badge active';
+      badge.innerHTML = '⚡ RUNNING ACTIVE';
+    } else if (motionState === 'walking') {
+      badge.className = 'avatar-badge active';
+      badge.innerHTML = '🚶 WALKING ACTIVE';
+    } else {
+      badge.className = 'avatar-badge';
+      badge.innerHTML = '🟢 IDLE &middot; NOMINAL';
+    }
+  }
+}
+connectWebSocket();
+window.addEventListener('resize',()=>{drawSpark(document.getElementById('temp-chart'),state.temp,'#C0791F');drawSpark(document.getElementById('pres-chart'),state.pressure,'#1F6F63');});
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.AthenaAvatar) {
+    window.AthenaAvatar.init('avatar-container');
+  }
+});
+</script>
+</body>
+</html>

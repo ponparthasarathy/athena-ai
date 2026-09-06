@@ -1,0 +1,21 @@
+{
+  "short_name": "Athena",
+  "name": "Athena Intelligent Health Companion",
+  "icons": [
+    {
+      "src": "/athena_flowchart_vector.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/athena_flowchart_vector.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#EEF2EF",
+  "theme_color": "#1F6F63",
+  "display": "standalone",
+  "orientation": "portrait"
+}

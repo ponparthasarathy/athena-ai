@@ -1,0 +1,312 @@
+[
+  {
+    "slide": 1,
+    "shapes": [
+      {
+        "name": "Rectangle 24",
+        "left": 1524000,
+        "top": 0,
+        "width": 9144000,
+        "height": 6858000,
+        "text": ""
+      },
+      {
+        "name": "Freeform: Shape 26",
+        "left": 5656780,
+        "top": 851521,
+        "width": 4638605,
+        "height": 5154967,
+        "text": ""
+      },
+      {
+        "name": "Title 7",
+        "left": 331286,
+        "top": -526757,
+        "width": 10363200,
+        "height": 2076450,
+        "text": "SMART INDIA HACKATHON 2026"
+      },
+      {
+        "name": "TextBox 9",
+        "left": 72642,
+        "top": 1294888,
+        "width": 6578177,
+        "height": 5238357,
+        "text": "\nProblem Statement ID – SIH26181\nProblem Statement Title- A secure, AI-powered Personal Health Companion that delivers real-time, privacy-preserving health monitoring and early warning capabilities, helping individuals recognize health risks before they become emergencies. The solution should improve resilience during heat waves, floods, pollution events, and other disasters common in India while enabling continuous health support through on-device intelligence.\nTheme- MedTech / BioTech / HealthTech\nPS Category- Hardware\nTeam Name- IgniteX"
+      },
+      {
+        "name": "Subtitle 3",
+        "left": 1219200,
+        "top": 551455,
+        "width": 8534400,
+        "height": 1752600,
+        "text": "\nTITLE PAGE"
+      }
+    ]
+  },
+  {
+    "slide": 2,
+    "shapes": [
+      {
+        "name": "Rectangle 8",
+        "left": 0,
+        "top": 6354762,
+        "width": 12191999,
+        "height": 503238,
+        "text": ""
+      },
+      {
+        "name": "Title 1",
+        "left": 182998,
+        "top": 0,
+        "width": 10972800,
+        "height": 1143000,
+        "text": "\u000bIDEA TITLE"
+      },
+      {
+        "name": "Slide Number Placeholder 5",
+        "left": 8737600,
+        "top": 6356353,
+        "width": 2844800,
+        "height": 365125,
+        "text": "2"
+      },
+      {
+        "name": "Footer Placeholder 6",
+        "left": 4648200,
+        "top": 6356353,
+        "width": 3204000,
+        "height": 365125,
+        "text": "@SIH Idea submission- Template"
+      },
+      {
+        "name": "Oval 9",
+        "left": 329773,
+        "top": 252246,
+        "width": 1251857,
+        "height": 807334,
+        "text": "IgniteX"
+      },
+      {
+        "name": "TextBox 1",
+        "left": 326731,
+        "top": 1339595,
+        "width": 11846938,
+        "height": 5375831,
+        "text": "Detailed explanation of the proposed solution\nAthena is a wearable health-monitoring device with a hybrid edge-cloud AI architecture\nSensors (MAX30102, body temp, BME280, MPU6050) feed a fused risk score computed on-device via TinyML\nWhen connected, Google Gemini provides deeper AI health advisory; the system runs fully offline otherwise\nHow it addresses the problem\nContinuously monitors HR, SpO2, body temp, and motion — matches the PS's core monitoring requirement\nDetects heat-stress and fall risk in real time using on-device inference, even with no internet [1]\nGSM-based SOS to caregivers works independent of WiFi — solving the exact \"disaster connectivity loss\" gap in the problem statement\nInnovation and uniqueness of the solution\nHybrid offline (TinyML) / online (Gemini) intelligence — most competitors assume constant connectivity\nLive 3D motion-telemetry visualization (wireframe avatar reflecting real movement/fall state)\nTiered, escalating alert system (vibration → OLED → full SOS) instead of a single binary alarm\n\n\n"
+      }
+    ]
+  },
+  {
+    "slide": 3,
+    "shapes": [
+      {
+        "name": "Rectangle 9",
+        "left": 0,
+        "top": 6354762,
+        "width": 12191999,
+        "height": 503238,
+        "text": ""
+      },
+      {
+        "name": "Title 1",
+        "left": 609600,
+        "top": -47625,
+        "width": 10972800,
+        "height": 1143000,
+        "text": "TECHNICAL APPROACH"
+      },
+      {
+        "name": "TextBox 8",
+        "left": 792480,
+        "top": 1228397,
+        "width": 6583616,
+        "height": 4708981,
+        "text": "Technologies to be used\nESP32 (edge compute) + MAX30102, BME280, MPU6050 sensors, OLED display, vibration motor, GSM module\nTinyML for on-device inference, Google Gemini 2.5 API for cloud-side advisory\nMQTT (HiveMQ) → Docker backend → Render hosting → WebSocket live dashboard\nThree.js for real-time 3D motion-telemetry visualization\n\nMethodology and process for implementation\nPipeline: Sensors → local risk fusion (TinyML) → MQTT publish → dashboard + Gemini analysis (if online) → SOS alert\n\n"
+      },
+      {
+        "name": "Slide Number Placeholder 5",
+        "left": 8737600,
+        "top": 6356353,
+        "width": 2844800,
+        "height": 365125,
+        "text": "3"
+      },
+      {
+        "name": "Footer Placeholder 6",
+        "left": 4648200,
+        "top": 6356353,
+        "width": 3204000,
+        "height": 365125,
+        "text": "@SIH Idea submission- Template"
+      },
+      {
+        "name": "Oval 10",
+        "left": 329773,
+        "top": 252246,
+        "width": 1251857,
+        "height": 807334,
+        "text": "IgniteX"
+      }
+    ]
+  },
+  {
+    "slide": 4,
+    "shapes": [
+      {
+        "name": "Rectangle 9",
+        "left": 0,
+        "top": 6354762,
+        "width": 12191999,
+        "height": 503238,
+        "text": ""
+      },
+      {
+        "name": "Title 1",
+        "left": 609600,
+        "top": -47625,
+        "width": 10972800,
+        "height": 1143000,
+        "text": "FEASIBILITY AND VIABILITY"
+      },
+      {
+        "name": "TextBox 8",
+        "left": 749300,
+        "top": 1253322,
+        "width": 9385300,
+        "height": 3785652,
+        "text": "Analysis of the feasibility of the idea\nAll components are off-the-shelf and already integrated in a working prototype, not just a concept\nPotential challenges and risks\nNetwork dependency for Gemini advisory\nWearable battery life under continuous sensing\nSensor accuracy/placement (body temp, HR) needs calibration\nStrategies for overcoming these challenges\nTinyML offline fallback removes dependency on constant connectivity\nDeep-sleep duty cycling extends battery life\nGSM module ensures SOS works with zero WiFi/internet\nDebounce logic (sustained risk threshold) prevents false-alarm SOS triggers"
+      },
+      {
+        "name": "Slide Number Placeholder 5",
+        "left": 8737600,
+        "top": 6356353,
+        "width": 2844800,
+        "height": 365125,
+        "text": "4"
+      },
+      {
+        "name": "Footer Placeholder 6",
+        "left": 4648200,
+        "top": 6356353,
+        "width": 3204000,
+        "height": 365125,
+        "text": "@SIH Idea submission- Template"
+      },
+      {
+        "name": "Oval 11",
+        "left": 329773,
+        "top": 252246,
+        "width": 1251857,
+        "height": 807334,
+        "text": "IgniteX"
+      }
+    ]
+  },
+  {
+    "slide": 5,
+    "shapes": [
+      {
+        "name": "Rectangle 9",
+        "left": 0,
+        "top": 6354762,
+        "width": 12191999,
+        "height": 503238,
+        "text": ""
+      },
+      {
+        "name": "Title 1",
+        "left": 609600,
+        "top": -47625,
+        "width": 10972800,
+        "height": 1143000,
+        "text": "IMPACT AND BENEFITS"
+      },
+      {
+        "name": "TextBox 8",
+        "left": 774700,
+        "top": 1395246,
+        "width": 9385300,
+        "height": 3170099,
+        "text": "Potential impact on the target audience\nElderly, outdoor laborers, rural/disaster-prone populations, and chronic-condition patients — directly matching the PS's stated vulnerable groups [2]\n\nBenefits of the solution (social, economic, environmental)\nSocial: Early warning before emergencies; functions without connectivity during the exact disasters that knock out other systems [3]\nEconomic: Low-cost, decentralized monitoring vs. clinical-grade devices\nEnvironmental: Edge-first processing reduces continuous cloud data transmission and associated energy use"
+      },
+      {
+        "name": "Slide Number Placeholder 5",
+        "left": 8737600,
+        "top": 6356353,
+        "width": 2844800,
+        "height": 365125,
+        "text": "5"
+      },
+      {
+        "name": "Footer Placeholder 6",
+        "left": 4648200,
+        "top": 6356353,
+        "width": 3204000,
+        "height": 365125,
+        "text": "@SIH Idea submission- Template"
+      },
+      {
+        "name": "Oval 11",
+        "left": 329773,
+        "top": 252246,
+        "width": 1251857,
+        "height": 807334,
+        "text": "IgniteX"
+      }
+    ]
+  },
+  {
+    "slide": 6,
+    "shapes": [
+      {
+        "name": "Rectangle 9",
+        "left": 0,
+        "top": 6354762,
+        "width": 12191999,
+        "height": 503238,
+        "text": ""
+      },
+      {
+        "name": "Title 1",
+        "left": 609600,
+        "top": -47625,
+        "width": 10972800,
+        "height": 1143000,
+        "text": "RESEARCH  AND REFERENCES"
+      },
+      {
+        "name": "TextBox 8",
+        "left": 609600,
+        "top": 1144500,
+        "width": 11287760,
+        "height": 4708981,
+        "text": "[1] WHO — Heat and Health\u000bwho.int\u000b→ Grounds the heat-stress detection use case in documented public health risk.\n[2] NDMA — Heat Wave Guidelines, Government of India\u000bndma.gov.in\u000b→ Supports the \"resilience during heat waves/disasters\" claim directly from the problem statement.\n[3] Ayushman Bharat Digital Mission\u000babdm.gov.in\u000b→ Aligns Athena with India's existing push toward accessible, low-cost digital healthcare.\n[4] Existing wearables — Fitbit, Apple Watch, Google Fit (comparative note)\u000b→ These assume constant connectivity for meaningful health insights; none are built for offline-first operation during disasters — this is the gap Athena addresses.\n[5] Athena — Live Project Dashboard\u000b[https://athena-ai-13ci.onrender.com/\u000b→ Working prototype, publicly viewable."
+      },
+      {
+        "name": "Slide Number Placeholder 5",
+        "left": 8737600,
+        "top": 6356353,
+        "width": 2844800,
+        "height": 365125,
+        "text": "6"
+      },
+      {
+        "name": "Footer Placeholder 6",
+        "left": 4648200,
+        "top": 6356353,
+        "width": 3204000,
+        "height": 365125,
+        "text": "@SIH Idea submission- Template"
+      },
+      {
+        "name": "Oval 8",
+        "left": 329773,
+        "top": 252246,
+        "width": 1251857,
+        "height": 807334,
+        "text": "IgniteX"
+      }
+    ]
+  }
+]
