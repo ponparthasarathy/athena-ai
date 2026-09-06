@@ -441,12 +441,46 @@ async def request_gemini_advisory(device_id: str, trigger_reason: str) -> Option
 
 
 def dispatch_emergency_sms_alert(device_id: str, title: str, advice: str):
-    """Dispatches live WhatsApp Cloud Gateway alerts with dynamic emergency parameters."""
+    """Dispatches live Telegram & WhatsApp Cloud Gateway alerts with dynamic emergency parameters."""
     caregiver_phone = os.getenv("CAREGIVER_PHONE", "+919486483868")
-    message_text = f"ATHENA EMERGENCY [{device_id}]\nALERT: {title}\nACTION: {advice}"
+    
+    # Escape HTML special chars for Telegram HTML parse_mode
+    clean_device_id = str(device_id).replace("<", "&lt;").replace(">", "&gt;")
+    clean_title = str(title).replace("<", "&lt;").replace(">", "&gt;")
+    clean_advice = str(advice).replace("<", "&lt;").replace(">", "&gt;")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    logger.info(f"[WHATSAPP GATEWAY] Dispatched Emergency Push Alert to Caregiver ({caregiver_phone}): {title}")
+    message_text = f"🚨 ATHENA HEALTH EMERGENCY [{device_id}]\n\n⚠️ ALERT: {title}\n👉 ACTION: {advice}"
 
+    logger.info(f"[EMERGENCY GATEWAY] Dispatched Push Alert for {device_id}: {title}")
+
+    # 1. Telegram Bot Instant Emergency Dispatch
+    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    if telegram_token and telegram_chat_id:
+        try:
+            import requests
+            tg_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+            tg_html_text = (
+                f"🚨 <b>ATHENA HEALTH EMERGENCY [{clean_device_id}]</b>\n\n"
+                f"⚠️ <b>ALERT:</b> {clean_title}\n"
+                f"👉 <b>ACTION:</b> {clean_advice}\n\n"
+                f"⏰ <b>TIMESTAMP:</b> {now_str}"
+            )
+            tg_payload = {
+                "chat_id": telegram_chat_id,
+                "text": tg_html_text,
+                "parse_mode": "HTML"
+            }
+            tg_res = requests.post(tg_url, json=tg_payload, timeout=5)
+            if tg_res.status_code == 200:
+                logger.info(f"[TELEGRAM GATEWAY SUCCESS] Dispatched Emergency Push Alert to Chat ID {telegram_chat_id}")
+            else:
+                logger.warning(f"[TELEGRAM GATEWAY NOTICE] HTTP {tg_res.status_code}: {tg_res.text}")
+        except Exception as tg_err:
+            logger.warning(f"[TELEGRAM GATEWAY NOTICE] {tg_err}")
+
+    # 2. Twilio WhatsApp Gateway Dispatch
     twilio_sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
     twilio_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
     twilio_from = os.getenv("TWILIO_PHONE_NUMBER", "").strip()
@@ -460,7 +494,6 @@ def dispatch_emergency_sms_alert(device_id: str, title: str, advice: str):
             wa_to = caregiver_phone if caregiver_phone.startswith("whatsapp:") else f"whatsapp:{caregiver_phone}"
             content_sid = os.getenv("TWILIO_WHATSAPP_CONTENT_SID", "HXfe5ab5f00277942d4d4200328b4d403c").strip()
             
-            # Format dynamic template parameters
             vars_json = json.dumps({
                 "1": f"ATHENA EMERGENCY [{device_id}]",
                 "2": title[:40],
