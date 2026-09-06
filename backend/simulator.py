@@ -23,7 +23,7 @@ env_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path=env_path) if os.path.exists(env_path) else load_dotenv()
 
 MQTT_BROKER = os.getenv("MQTT_BROKER_HOST", "broker.hivemq.com")
-MQTT_PORT = int(os.getenv("MQTT_BROKER_PORT", "1883"))
+MQTT_PORT = int(os.getenv("MQTT_BROKER_PORT", "8883"))
 MQTT_USER = os.getenv("MQTT_USERNAME", "")
 MQTT_PASS = os.getenv("MQTT_PASSWORD", "")
 DEVICE_ID = os.getenv("DEVICE_ID", "PHC-0001")
