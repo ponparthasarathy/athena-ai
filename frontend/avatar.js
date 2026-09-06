@@ -12,9 +12,9 @@
       this.camera = null;
       this.renderer = null;
       
-      this.state = 'idle';
-      this.targetState = 'idle';
-      this.currentActiveKey = 'idle';
+      this.state = 'breathing';
+      this.targetState = 'breathing';
+      this.currentActiveKey = 'breathing';
       
       // FBX Model Registry
       this.models = {
@@ -194,7 +194,7 @@
         if (container) this.init(container);
       }
 
-      if (!newState) return;
+      let key = 'breathing';
       const lower = String(newState).toLowerCase();
       if (lower.includes('fall')) {
         key = 'fallen';
