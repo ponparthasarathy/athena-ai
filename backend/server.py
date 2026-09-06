@@ -473,8 +473,9 @@ def _format_advice_bullet_points(raw_advice) -> str:
 
 
 def dispatch_emergency_sms_alert(device_id: str, title: str, advice):
-    """Dispatches live Telegram & WhatsApp Cloud Gateway alerts with dynamic emergency parameters."""
-    caregiver_phone = os.getenv("CAREGIVER_PHONE", "+919486483868")
+    """Dispatches live Telegram & WhatsApp Cloud Gateway alerts with dynamic emergency parameters to multiple recipients."""
+    raw_phones = os.getenv("CAREGIVER_PHONE", "+919486483868")
+    phone_list = [p.strip() for p in raw_phones.split(",") if p.strip()]
     
     # Escape HTML special chars for Telegram HTML parse_mode
     clean_device_id = str(device_id).replace("<", "&lt;").replace(">", "&gt;")
@@ -486,34 +487,37 @@ def dispatch_emergency_sms_alert(device_id: str, title: str, advice):
 
     logger.info(f"[EMERGENCY GATEWAY] Dispatched Push Alert for {device_id}: {title}")
 
-    # 1. Telegram Bot Instant Emergency Dispatch
+    # 1. Telegram Bot Multi-Recipient Instant Emergency Dispatch
     telegram_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-    telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
-    if telegram_token and telegram_chat_id:
-        try:
-            import requests
-            tg_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
-            tg_html_text = (
-                f"🚨 <b>ATHENA HEALTH EMERGENCY</b>\n"
-                f"📱 <b>Device ID:</b> {clean_device_id}\n\n"
-                f"⚠️ <b>ALERT SUMMARY:</b>\n{clean_title}\n\n"
-                f"📋 <b>RECOMMENDED ACTIONS:</b>\n{formatted_actions}\n\n"
-                f"⏰ <b>TIMESTAMP:</b> {now_str}"
-            )
-            tg_payload = {
-                "chat_id": telegram_chat_id,
-                "text": tg_html_text,
-                "parse_mode": "HTML"
-            }
-            tg_res = requests.post(tg_url, json=tg_payload, timeout=5)
-            if tg_res.status_code == 200:
-                logger.info(f"[TELEGRAM GATEWAY SUCCESS] Dispatched Emergency Push Alert to Chat ID {telegram_chat_id}")
-            else:
-                logger.warning(f"[TELEGRAM GATEWAY NOTICE] HTTP {tg_res.status_code}: {tg_res.text}")
-        except Exception as tg_err:
-            logger.warning(f"[TELEGRAM GATEWAY NOTICE] {tg_err}")
+    raw_chat_ids = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    chat_id_list = [c.strip() for c in raw_chat_ids.split(",") if c.strip()]
 
-    # 2. Twilio WhatsApp Gateway Dispatch
+    if telegram_token and chat_id_list:
+        import requests
+        tg_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+        tg_html_text = (
+            f"🚨 <b>ATHENA HEALTH EMERGENCY</b>\n"
+            f"📱 <b>Device ID:</b> {clean_device_id}\n\n"
+            f"⚠️ <b>ALERT SUMMARY:</b>\n{clean_title}\n\n"
+            f"📋 <b>RECOMMENDED ACTIONS:</b>\n{formatted_actions}\n\n"
+            f"⏰ <b>TIMESTAMP:</b> {now_str}"
+        )
+        for chat_id in chat_id_list:
+            try:
+                tg_payload = {
+                    "chat_id": chat_id,
+                    "text": tg_html_text,
+                    "parse_mode": "HTML"
+                }
+                tg_res = requests.post(tg_url, json=tg_payload, timeout=5)
+                if tg_res.status_code == 200:
+                    logger.info(f"[TELEGRAM GATEWAY SUCCESS] Dispatched Emergency Push Alert to Chat ID {chat_id}")
+                else:
+                    logger.warning(f"[TELEGRAM GATEWAY NOTICE] HTTP {tg_res.status_code} for Chat ID {chat_id}: {tg_res.text}")
+            except Exception as tg_err:
+                logger.warning(f"[TELEGRAM GATEWAY NOTICE] Error for Chat ID {chat_id}: {tg_err}")
+
+    # 2. Twilio WhatsApp Gateway Multi-Recipient Dispatch
     twilio_sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
     twilio_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
     twilio_from = os.getenv("TWILIO_PHONE_NUMBER", "").strip()
@@ -524,7 +528,6 @@ def dispatch_emergency_sms_alert(device_id: str, title: str, advice):
             client = Client(twilio_sid, twilio_token)
             
             wa_from = twilio_from if twilio_from.startswith("whatsapp:") else f"whatsapp:{twilio_from}"
-            wa_to = caregiver_phone if caregiver_phone.startswith("whatsapp:") else f"whatsapp:{caregiver_phone}"
             content_sid = os.getenv("TWILIO_WHATSAPP_CONTENT_SID", "HXfe5ab5f00277942d4d4200328b4d403c").strip()
             
             vars_json = json.dumps({
@@ -533,17 +536,22 @@ def dispatch_emergency_sms_alert(device_id: str, title: str, advice):
                 "3": advice[:60]
             })
 
-            try:
-                wa_msg = client.messages.create(
-                    from_=wa_from,
-                    to=wa_to,
-                    content_sid=content_sid,
-                    content_variables=vars_json
-                )
-            except Exception as templ_err:
-                wa_msg = client.messages.create(body=message_text, from_=wa_from, to=wa_to)
+            for target_phone in phone_list:
+                try:
+                    wa_to = target_phone if target_phone.startswith("whatsapp:") else f"whatsapp:{target_phone}"
+                    try:
+                        wa_msg = client.messages.create(
+                            from_=wa_from,
+                            to=wa_to,
+                            content_sid=content_sid,
+                            content_variables=vars_json
+                        )
+                    except Exception:
+                        wa_msg = client.messages.create(body=message_text, from_=wa_from, to=wa_to)
 
-            logger.info(f"[WHATSAPP GATEWAY SUCCESS] Dispatched WhatsApp SID: {wa_msg.sid} to {wa_to}")
+                    logger.info(f"[WHATSAPP GATEWAY SUCCESS] Dispatched WhatsApp SID: {wa_msg.sid} to {wa_to}")
+                except Exception as wa_individual_err:
+                    logger.warning(f"[WHATSAPP GATEWAY NOTICE] Failed for {target_phone}: {wa_individual_err}")
 
         except Exception as tw_err:
             logger.warning(f"[WHATSAPP GATEWAY NOTICE] {tw_err}")
