@@ -441,48 +441,37 @@ async def request_gemini_advisory(device_id: str, trigger_reason: str) -> Option
 
 
 def dispatch_emergency_sms_alert(device_id: str, title: str, advice: str):
-    """Dispatches SMS & WhatsApp Cloud Gateway alerts to caregiver mobile numbers (Lock-Screen Push)."""
-    caregiver_phone = os.getenv("CAREGIVER_PHONE", "+91-9876543210")
-    message_text = f"🚨 ATHENA HEALTH EMERGENCY [{device_id}]\n⚠️ {title}\n👉 Action: {advice}"
+    """Dispatches live WhatsApp Cloud Gateway alerts to caregiver mobile numbers."""
+    caregiver_phone = os.getenv("CAREGIVER_PHONE", "+919486483868")
+    message_text = f"ATHENA HEALTH EMERGENCY [{device_id}]\nALERT: {title}\nACTION: {advice}"
 
-    logger.info(f"[SMS/WHATSAPP GATEWAY] Dispatched Lock-Screen Push Alert to Caregiver ({caregiver_phone}): ALERT: {title} | Action: {advice}")
+    logger.info(f"[WHATSAPP GATEWAY] Dispatched Emergency Push Alert to Caregiver ({caregiver_phone}): {title}")
 
-    # Optional Live Twilio / Fast2SMS / WhatsApp REST API Integration
     twilio_sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
     twilio_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
     twilio_from = os.getenv("TWILIO_PHONE_NUMBER", "").strip()
 
-    if twilio_sid and twilio_token and twilio_from:
+    if twilio_sid and twilio_token and twilio_from and os.getenv("ENABLE_WHATSAPP_ALERTS", "true").lower() == "true":
         try:
             from twilio.rest import Client
             client = Client(twilio_sid, twilio_token)
             
-            # Send WhatsApp Message
-            if os.getenv("ENABLE_WHATSAPP_ALERTS", "true").lower() == "true":
-                try:
-                    wa_from = twilio_from if twilio_from.startswith("whatsapp:") else f"whatsapp:{twilio_from}"
-                    wa_to = caregiver_phone if caregiver_phone.startswith("whatsapp:") else f"whatsapp:{caregiver_phone}"
-                    content_sid = os.getenv("TWILIO_WHATSAPP_CONTENT_SID", "").strip()
-                    try:
-                        wa_msg = client.messages.create(body=message_text, from_=wa_from, to=wa_to)
-                    except Exception as body_err:
-                        if content_sid:
-                            wa_msg = client.messages.create(from_=wa_from, to=wa_to, content_sid=content_sid)
-                        else:
-                            raise body_err
-                    logger.info(f"[WHATSAPP GATEWAY SUCCESS] Dispatched WhatsApp SID: {wa_msg.sid} to {wa_to}")
-                except Exception as wa_err:
-                    logger.warning(f"[WHATSAPP GATEWAY NOTICE] {wa_err}")
-
-            # Send SMS
+            wa_from = twilio_from if twilio_from.startswith("whatsapp:") else f"whatsapp:{twilio_from}"
+            wa_to = caregiver_phone if caregiver_phone.startswith("whatsapp:") else f"whatsapp:{caregiver_phone}"
+            content_sid = os.getenv("TWILIO_WHATSAPP_CONTENT_SID", "").strip()
+            
             try:
-                sms = client.messages.create(body=message_text, from_=twilio_from, to=caregiver_phone)
-                logger.info(f"[TWILIO SMS SUCCESS] Dispatched SMS SID: {sms.sid} to {caregiver_phone}")
-            except Exception as sms_err:
-                logger.warning(f"[TWILIO SMS NOTICE] {sms_err}")
+                wa_msg = client.messages.create(body=message_text, from_=wa_from, to=wa_to)
+            except Exception as body_err:
+                if content_sid:
+                    wa_msg = client.messages.create(from_=wa_from, to=wa_to, content_sid=content_sid)
+                else:
+                    raise body_err
+
+            logger.info(f"[WHATSAPP GATEWAY SUCCESS] Dispatched WhatsApp SID: {wa_msg.sid} to {wa_to}")
 
         except Exception as tw_err:
-            logger.warning(f"[SMS/WHATSAPP GATEWAY NOTICE] {tw_err}")
+            logger.warning(f"[WHATSAPP GATEWAY NOTICE] {tw_err}")
 
 
 
