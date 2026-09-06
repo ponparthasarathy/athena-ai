@@ -4,6 +4,7 @@
 
 # Environment variables (contains API keys -- NEVER commit this)
 backend/.env
+.env
 
 # Python
 __pycache__/
