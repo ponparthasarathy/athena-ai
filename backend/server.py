@@ -441,9 +441,9 @@ async def request_gemini_advisory(device_id: str, trigger_reason: str) -> Option
 
 
 def dispatch_emergency_sms_alert(device_id: str, title: str, advice: str):
-    """Dispatches live WhatsApp Cloud Gateway alerts to caregiver mobile numbers."""
+    """Dispatches live WhatsApp Cloud Gateway alerts with dynamic emergency parameters."""
     caregiver_phone = os.getenv("CAREGIVER_PHONE", "+919486483868")
-    message_text = f"ATHENA HEALTH EMERGENCY [{device_id}]\nALERT: {title}\nACTION: {advice}"
+    message_text = f"ATHENA EMERGENCY [{device_id}]\nALERT: {title}\nACTION: {advice}"
 
     logger.info(f"[WHATSAPP GATEWAY] Dispatched Emergency Push Alert to Caregiver ({caregiver_phone}): {title}")
 
@@ -458,15 +458,24 @@ def dispatch_emergency_sms_alert(device_id: str, title: str, advice: str):
             
             wa_from = twilio_from if twilio_from.startswith("whatsapp:") else f"whatsapp:{twilio_from}"
             wa_to = caregiver_phone if caregiver_phone.startswith("whatsapp:") else f"whatsapp:{caregiver_phone}"
-            content_sid = os.getenv("TWILIO_WHATSAPP_CONTENT_SID", "").strip()
+            content_sid = os.getenv("TWILIO_WHATSAPP_CONTENT_SID", "HXfe5ab5f00277942d4d4200328b4d403c").strip()
             
+            # Format dynamic template parameters
+            vars_json = json.dumps({
+                "1": f"ATHENA EMERGENCY [{device_id}]",
+                "2": title[:40],
+                "3": advice[:60]
+            })
+
             try:
+                wa_msg = client.messages.create(
+                    from_=wa_from,
+                    to=wa_to,
+                    content_sid=content_sid,
+                    content_variables=vars_json
+                )
+            except Exception as templ_err:
                 wa_msg = client.messages.create(body=message_text, from_=wa_from, to=wa_to)
-            except Exception as body_err:
-                if content_sid:
-                    wa_msg = client.messages.create(from_=wa_from, to=wa_to, content_sid=content_sid)
-                else:
-                    raise body_err
 
             logger.info(f"[WHATSAPP GATEWAY SUCCESS] Dispatched WhatsApp SID: {wa_msg.sid} to {wa_to}")
 
