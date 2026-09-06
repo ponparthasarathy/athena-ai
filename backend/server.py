@@ -48,7 +48,7 @@ MQTT_TOPIC_STATUS = os.getenv("MQTT_TOPIC_STATUS", "athena/device/+/status")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 AI_ROUTINE_INTERVAL_SEC = int(os.getenv("AI_ROUTINE_INTERVAL_SEC", "300"))
-AI_ANOMALY_COOLDOWN_SEC = int(os.getenv("AI_ANOMALY_COOLDOWN_SEC", "45"))
+AI_ANOMALY_COOLDOWN_SEC = int(os.getenv("AI_ANOMALY_COOLDOWN_SEC", "10"))
 
 # Initialize Gemini AI Client
 gemini_client = None
@@ -561,18 +561,22 @@ def check_and_trigger_ai(device_id: str, telemetry: Dict[str, Any]):
     dev = registry.get_or_create(device_id)
     now = time.time()
 
-    fall = telemetry.get("fall_detected", False) or telemetry.get("is_emergency", False)
-    spo2 = telemetry.get("spo2", 98)
-    finger = telemetry.get("finger_detected", False)
-    hi = telemetry.get("heat_index_c", 25.0)
-    hr = telemetry.get("heart_rate", 72)
-    still_min = telemetry.get("last_movement_min", 0.0)
+    fall = (
+        telemetry.get("fall_detected", False) 
+        or telemetry.get("is_emergency", False) 
+        or telemetry.get("tinyml_class") == "FALL_DETECTED"
+    )
+    spo2 = float(telemetry.get("spo2", 98))
+    hi = float(telemetry.get("heat_index_c", 25.0))
+    hr = float(telemetry.get("heart_rate", 72))
+    still_min = float(telemetry.get("last_movement_min", 0.0))
+    heat_cls = telemetry.get("tinyml_heat_class", "HEAT_NORMAL")
 
     # Anomaly conditions
     is_fall_anomaly = fall
-    is_hypoxia_anomaly = finger and spo2 > 0 and spo2 < 92
-    is_heat_strain_anomaly = hi > 38.0 and hr > 100
-    is_resting_tachycardia = hr > 120 and still_min > 4.0 and finger
+    is_hypoxia_anomaly = (0 < spo2 < 92)
+    is_heat_strain_anomaly = (hi >= 38.0 or heat_cls in ["HEAT_EMERGENCY", "HEAT_WARNING"] or hr > 115)
+    is_resting_tachycardia = (hr > 120 and still_min > 2.0)
 
     is_emergency = is_fall_anomaly or is_hypoxia_anomaly or is_heat_strain_anomaly or is_resting_tachycardia
 
@@ -580,11 +584,11 @@ def check_and_trigger_ai(device_id: str, telemetry: Dict[str, Any]):
     if is_fall_anomaly:
         reason = "EMERGENCY_FALL_DETECTED"
     elif is_hypoxia_anomaly:
-        reason = f"EMERGENCY_HYPOXIA_SPO2_{spo2}%"
+        reason = f"EMERGENCY_HYPOXIA_SPO2_{int(spo2)}%"
     elif is_heat_strain_anomaly:
-        reason = f"ALERT_HEAT_STRAIN_HI_{hi:.1f}C_HR_{hr}BPM"
+        reason = f"ALERT_HEAT_STRAIN_HI_{hi:.1f}C_HR_{int(hr)}BPM"
     elif is_resting_tachycardia:
-        reason = f"ALERT_RESTING_TACHYCARDIA_{hr}BPM"
+        reason = f"ALERT_RESTING_TACHYCARDIA_{int(hr)}BPM"
     elif (now - dev.last_ai_routine_time) >= AI_ROUTINE_INTERVAL_SEC:
         reason = "ROUTINE_HEALTH_AUDIT"
 
